@@ -265,9 +265,9 @@
 
                     <label for="selectDisplayMode" style="font-size: 13px; color: var(--text-muted);">View Mode:</label>
                     <select id="selectDisplayMode" class="select-control">
-                        <option value="combined_temp">Combined Morning & Afternoon Temperature (#ff0099)</option>
-                        <option value="separate_temp">Morning Temp (#ff0099) vs Afternoon Temp (#8f8f8f)</option>
-                        <option value="temp_moisture">Temp (#ff0099) & Moisture (#00a0fc)</option>
+                        <option value="combined_temp">Combined Morning & Afternoon Temperature</option>
+                        <option value="separate_temp">Morning Temp vs Afternoon Temp </option>
+                        <option value="temp_moisture">Temp & Moisture</option>
                     </select>
                 </div>
             </div>
@@ -472,32 +472,70 @@
         function processSheetRows(rows) {
     if (!rows || !Array.isArray(rows) || rows.length === 0) return [];
 
-    return rows.map(r => {
-        // Ambil nilai berdasarkan header Google Sheet Anda
-        const heapVal = String(r['Variable'] || r['Heap'] || '').trim();
-        
-        // Helper parse angka (mengubah koma ke titik)
-        const parseNum = (val) => {
-            if (val === undefined || val === null || val === '') return 0;
-            let strVal = String(val).replace(',', '.').trim();
-            return parseFloat(strVal) || 0;
-        };
+    // Helper parse angka (mendukung angka negatif, desimal koma/titik)
+    const parseNum = (val) => {
+        if (val === undefined || val === null || val === '') return 0;
+        let strVal = String(val).replace(',', '.').trim();
+        let num = parseFloat(strVal);
+        return isNaN(num) ? 0 : num;
+    };
+
+    // 1. Mapping mentah baris data
+    const rawMapped = rows.map(r => {
+        // Ambil nilai Day (bisa berupa angka negatif seperti -7 atau positif)
+        const rawDay = r['Days'] !== undefined ? r['Days'] : 
+                       (r['Day'] !== undefined ? r['Day'] : 
+                       (r['(Morning)'] !== undefined ? r['(Morning)'] : r['(Afternoon)']));
 
         return {
-            heap: heapVal,
-            day: parseNum(r['Days'] || r['Day']),
-            sp: String(r['SP'] || '').trim(),
-            posisi: String(r['Posisi'] || '').trim(),
-            temp: parseNum(r['Temp']),
-            moisture: parseNum(r['Moist']),
+            heap: String(r['Variable'] || r['Heap'] || '').trim(),
+            day: parseNum(rawDay),
+            posisi: String(r['Position'] || r['Posisi'] || '').trim(),
+            temp: parseNum(r['Temperature'] || r['Temp'] || r['Suhu']),
+            moisture: parseNum(r['Moisture'] || r['Moist'] || r['Lembab']),
             ec: parseNum(r['EC']),
             ph: parseNum(r['pH']),
-            n: parseNum(r['N']),
+            carbon: parseNum(r['Carbon'] || r['C'] || r['C (%)']),
+            n: parseNum(r['N'] || r['N (%)']),
             p: parseNum(r['P']),
             k: parseNum(r['K']),
             fertility: parseNum(r['Fertility'])
         };
     }).filter(d => d.heap !== "" && d.heap !== "undefined");
+
+    // 2. Gruping dinamis per Heap & Day (Otomatis membagi 2 atau 3 posisi)
+    const aggregated = {};
+    rawMapped.forEach(item => {
+        const key = `${item.heap}_${item.day}`;
+        if (!aggregated[key]) {
+            aggregated[key] = { ...item, count: 1 };
+        } else {
+            aggregated[key].temp += item.temp;
+            aggregated[key].moisture += item.moisture;
+            aggregated[key].ec += item.ec;
+            aggregated[key].ph += item.ph;
+            aggregated[key].carbon += item.carbon;
+            aggregated[key].n += item.n;
+            aggregated[key].p += item.p;
+            aggregated[key].k += item.k;
+            aggregated[key].fertility += item.fertility;
+            aggregated[key].count += 1; // Otomatis bernilai 2 untuk hari -7 s/d -1, dan 3 untuk hari 0 ke atas
+        }
+    });
+
+    // 3. Kalkulasi nilai rata-rata berdasarkan pembagi aktual
+    return Object.values(aggregated).map(item => ({
+        ...item,
+        temp: item.temp / item.count,
+        moisture: item.moisture / item.count,
+        ec: item.ec / item.count,
+        ph: item.ph / item.count,
+        carbon: item.carbon / item.count,
+        n: item.n / item.count,
+        p: item.p / item.count,
+        k: item.k / item.count,
+        fertility: item.fertility / item.count
+    }));
 }
 
         function initDropdowns() {
