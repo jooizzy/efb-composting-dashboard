@@ -391,7 +391,7 @@
     <script>
         // GOOGLE SPREADSHEET IDs & SHEETS CONFIGURATION
         const BATCH2_ID = "1GkNivoXgBinhB6y-hM_JxfhNy-Kt2DE0KG6EStcvTe0";
-        const BATCH1_ID = "1FQQ0T7-45Kvw1jbyTM-61CAIQbzMAo8V47Ssz2fMDuo";
+        const BATCH1_ID = "1UwUsN1I9M9aeGZziCxLqRcloGOWkuYva_vklwbNZXyQ";
 
         const BATCH1_SHEET_MORNING = "Diisi Recap Data Batch 1 (Morning)";
         const BATCH1_SHEET_AFTERNOON = "Diisi Recap Data Batch 1 (Afternoon)";
@@ -488,15 +488,15 @@
                                (r['(Morning)'] !== undefined ? r['(Morning)'] : r['(Afternoon)']));
 
                 return {
-                    heap: String(r['Variable'] || r['Heap'] || '').trim(),
+                    heap: String(r['Variable']).trim(),
                     day: parseNum(rawDay),
-                    posisi: String(r['Position'] || r['Posisi'] || '').trim(),
-                    temp: parseNum(r['Temperature'] || r['Temp'] || r['Suhu']),
-                    moisture: parseNum(r['Moisture'] || r['Moist'] || r['Lembab']),
+                    posisi: String(r['Position']).trim(),
+                    temp: parseNum(r['Temperature']),
+                    moisture: parseNum(r['Moisture']),
                     ec: parseNum(r['EC']),
                     ph: parseNum(r['pH']),
-                    carbon: parseNum(r['Carbon'] || r['C'] || r['C (%)']),
-                    n: parseNum(r['N'] || r['N (%)']),
+                    carbon: parseNum(r['Carbon']']),
+                    n: parseNum(r['N']),
                     p: parseNum(r['P']),
                     k: parseNum(r['K']),
                     fertility: parseNum(r['Fertility'])
