@@ -307,7 +307,7 @@
     <div class="card-grid">
         <div class="card">
             <div class="card-header">
-                <div class="card-title">Heap Performance & Conformity Score (0-100%)</div>
+                <div class="card-title">Heap Statistics Comparison (Quality Score 0-100 & Details)</div>
                 <div class="controls-group">
                     <select id="radarSelect1" class="select-control"></select>
                     <select id="radarSelect2" class="select-control"></select>
@@ -408,46 +408,6 @@
         // Chart Instances
         let mainChart, tempCompChart, radarChartInst, cnAllChartInst, cnCustomChartInst;
 
-        // Fungsi mengubah Nilai Aktual menjadi Skor Performa (0 - 100%)
-        function calculateScore(paramName, value) {
-            if (value === undefined || value === null || isNaN(value)) return 0;
-
-            switch (paramName.toLowerCase()) {
-                case 'temp':
-                case 'temperature':
-                    if (value >= 25 && value <= 35) return 100;
-                    if (value < 25) return Math.max(0, 100 - (25 - value) * 10);
-                    return Math.max(0, 100 - (value - 35) * 3);
-
-                case 'moisture':
-                    if (value >= 40 && value <= 60) return 100;
-                    if (value < 40) return Math.max(0, (value / 40) * 100);
-                    return Math.max(0, 100 - (value - 60) * 2.5);
-
-                case 'ph':
-                    if (value >= 6.5 && value <= 8.5) return 100;
-                    if (value < 6.5) return Math.max(0, (value / 6.5) * 100);
-                    return Math.max(0, 100 - (value - 8.5) * 20);
-
-                case 'ec':
-                    let ecVal = value > 100 ? value / 1000 : value;
-                    if (ecVal <= 4.0) return 100;
-                    return Math.max(0, 100 - (ecVal - 4.0) * 20);
-
-                case 'n':
-                    return Math.min(100, (value / 0.4) * 100);
-
-                case 'p':
-                    return Math.min(100, (value / 0.1) * 100);
-
-                case 'k':
-                    return Math.min(100, (value / 0.2) * 100);
-
-                default:
-                    return 50;
-            }
-        }
-
         window.addEventListener('DOMContentLoaded', async () => {
             initCharts();
             setupEventListeners();
@@ -534,7 +494,6 @@
                     moisture: parseNum(r['Moisture']),
                     ec: parseNum(r['EC']),
                     ph: parseNum(r['pH']),
-                    carbon: parseNum(r['Carbon']),
                     n: parseNum(r['N']),
                     p: parseNum(r['P']),
                     k: parseNum(r['K']),
@@ -593,6 +552,52 @@
                 }
             });
             return treatmentMap;
+        }
+
+        // ==========================================
+        // LOGIKA SKALA PERFORMA/KUALITAS KOMPOS (0-100)
+        // ==========================================
+        function calcTempScore(temp) {
+            if (temp >= 25 && temp <= 32) return 95; // Ambien Ideal Kompos Matang
+            if (temp >= 33 && temp <= 45) return 80; // Tahap Mesofilik
+            if (temp >= 46 && temp <= 65) return 65; // Tahap Termofilik/Aktif
+            if (temp < 20) return 40;
+            return 30; // Terlalu panas / Overheating (>65)
+        }
+
+        function calcECScore(ec) {
+            if (ec < 500) return Math.min(30, (ec / 500) * 30);
+            if (ec >= 500 && ec <= 1000) return 31 + ((ec - 500) / 500) * 34; // 31-65
+            if (ec > 1000 && ec <= 2000) return 66 + ((ec - 1000) / 1000) * 29; // 66-95 (Sweet Spot)
+            if (ec > 2000 && ec <= 2500) return 96 + ((ec - 2000) / 500) * 4; // 96-100 (Pekat)
+            return Math.max(10, 100 - ((ec - 2500) / 1000) * 40); // >2500 Salin / Asin
+        }
+
+        function calcKScore(k) {
+            if (k >= 1.5 && k <= 3.0) return 90;
+            if (k > 1.0 && k < 1.5) return 75;
+            if (k > 3.0) return 85;
+            return Math.min(60, k * 50);
+        }
+
+        function calcPScore(p) {
+            if (p >= 0.3 && p <= 1.0) return 92;
+            if (p >= 0.1 && p < 0.3) return 70;
+            return Math.min(50, p * 100);
+        }
+
+        function calcNScore(n) {
+            if (n >= 1.5 && n <= 2.5) return 95;
+            if (n >= 1.0 && n < 1.5) return 75;
+            if (n > 2.5) return 85;
+            return Math.min(60, n * 50);
+        }
+
+        function calcMoistureScore(m) {
+            if (m >= 40 && m <= 60) return 90; // Ideal
+            if (m >= 30 && m < 40) return 70;
+            if (m > 60 && m <= 70) return 65;
+            return 40; // Terlalu Kering/Basah
         }
 
         function initDropdowns() {
@@ -703,13 +708,22 @@
             radarChartInst = new Chart(ctxRadar, {
                 type: 'radar',
                 data: {
-                    labels: ['Suhu', 'pH', 'EC', 'Kalium (K)', 'Fosfor (P)', 'Nitrogen (N)', 'Kelembapan'],
+                    labels: ['Temperature', 'EC', 'K', 'P', 'N', 'Moisture'],
                     datasets: []
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#f8fafc' } } },
+                    plugins: { 
+                        legend: { labels: { color: '#f8fafc' } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label} (${context.label}): ${context.raw} / 100 (Indeks Optimal)`;
+                                }
+                            }
+                        }
+                    },
                     scales: {
                         r: {
                             min: 0,
@@ -931,25 +945,17 @@
                 const avgK = avg(hData.map(d => d.k));
                 const avgFert = avg(hData.map(d => d.fertility));
 
-                const scoreTemp = calculateScore('temperature', avgTemp);
-                const scorePH = calculateScore('ph', avgPH);
-                const scoreEC = calculateScore('ec', avgEC);
-                const scoreK = calculateScore('k', avgK);
-                const scoreP = calculateScore('p', avgP);
-                const scoreN = calculateScore('n', avgN);
-                const scoreMoist = calculateScore('moisture', avgMoist);
+                // Konversi data absolut ke Skala Performa / Kualitas (0 - 100)
+                const scoreTemp = Math.round(calcTempScore(avgTemp));
+                const scoreEC = Math.round(calcECScore(avgEC));
+                const scoreK = Math.round(calcKScore(avgK));
+                const scoreP = Math.round(calcPScore(avgP));
+                const scoreN = Math.round(calcNScore(avgN));
+                const scoreMoist = Math.round(calcMoistureScore(avgMoist));
 
                 radarDatasets.push({
                     label: `Heap ${heap} (${batch})`,
-                    data: [
-                        Math.round(scoreTemp),
-                        Math.round(scorePH),
-                        Math.round(scoreEC),
-                        Math.round(scoreK),
-                        Math.round(scoreP),
-                        Math.round(scoreN),
-                        Math.round(scoreMoist)
-                    ],
+                    data: [scoreTemp, scoreEC, scoreK, scoreP, scoreN, scoreMoist],
                     borderColor: palette[idx].border,
                     backgroundColor: palette[idx].fill,
                     borderWidth: 2
@@ -961,11 +967,11 @@
                         ${renderStatRow('Temperature', avgTemp.toFixed(1) + ' °C', scoreTemp, 100, palette[idx].border)}
                         ${renderStatRow('Moisture', avgMoist.toFixed(1) + ' %', scoreMoist, 100, palette[idx].border)}
                         ${renderStatRow('EC', avgEC.toFixed(0) + ' µS/cm', scoreEC, 100, palette[idx].border)}
-                        ${renderStatRow('pH', avgPH.toFixed(1), scorePH, 100, palette[idx].border)}
+                        ${renderStatRow('pH', avgPH.toFixed(1), (avgPH/14)*100, 100, palette[idx].border)}
                         ${renderStatRow('N', avgN.toFixed(2) + ' %', scoreN, 100, palette[idx].border)}
                         ${renderStatRow('P', avgP.toFixed(2) + ' %', scoreP, 100, palette[idx].border)}
                         ${renderStatRow('K', avgK.toFixed(2) + ' %', scoreK, 100, palette[idx].border)}
-                        ${renderStatRow('Fertility', avgFert.toFixed(1), Math.min(100, (avgFert / 5) * 100), 100, palette[idx].border)}
+                        ${renderStatRow('Fertility', avgFert.toFixed(1), (avgFert/5)*100, 100, palette[idx].border)}
                     </div>
                 `;
             });
@@ -976,12 +982,12 @@
             document.getElementById('radarStatCards').innerHTML = cardsHTML;
         }
 
-        function renderStatRow(label, valueStr, val, maxVal, color) {
-            const pct = Math.min(100, Math.max(0, (val / maxVal) * 100));
+        function renderStatRow(label, valueStr, pctVal, maxVal, color) {
+            const pct = Math.min(100, Math.max(0, (pctVal / maxVal) * 100));
             return `
                 <div class="stat-row">
                     <div class="stat-label-val">
-                        <span>${label} (${Math.round(pct)}%)</span>
+                        <span>${label}</span>
                         <span style="font-weight:600; color:var(--text-main);">${valueStr}</span>
                     </div>
                     <div class="stat-bar-bg">
