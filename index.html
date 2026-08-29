@@ -307,7 +307,7 @@
     <div class="card-grid">
         <div class="card">
             <div class="card-header">
-                <div class="card-title">Heap Statistics Comparison (Radar & Details)</div>
+                <div class="card-title">Heap Performance & Conformity Score (0-100%)</div>
                 <div class="controls-group">
                     <select id="radarSelect1" class="select-control"></select>
                     <select id="radarSelect2" class="select-control"></select>
@@ -408,6 +408,46 @@
         // Chart Instances
         let mainChart, tempCompChart, radarChartInst, cnAllChartInst, cnCustomChartInst;
 
+        // Fungsi mengubah Nilai Aktual menjadi Skor Performa (0 - 100%)
+        function calculateScore(paramName, value) {
+            if (value === undefined || value === null || isNaN(value)) return 0;
+
+            switch (paramName.toLowerCase()) {
+                case 'temp':
+                case 'temperature':
+                    if (value >= 25 && value <= 35) return 100;
+                    if (value < 25) return Math.max(0, 100 - (25 - value) * 10);
+                    return Math.max(0, 100 - (value - 35) * 3);
+
+                case 'moisture':
+                    if (value >= 40 && value <= 60) return 100;
+                    if (value < 40) return Math.max(0, (value / 40) * 100);
+                    return Math.max(0, 100 - (value - 60) * 2.5);
+
+                case 'ph':
+                    if (value >= 6.5 && value <= 8.5) return 100;
+                    if (value < 6.5) return Math.max(0, (value / 6.5) * 100);
+                    return Math.max(0, 100 - (value - 8.5) * 20);
+
+                case 'ec':
+                    let ecVal = value > 100 ? value / 1000 : value;
+                    if (ecVal <= 4.0) return 100;
+                    return Math.max(0, 100 - (ecVal - 4.0) * 20);
+
+                case 'n':
+                    return Math.min(100, (value / 0.4) * 100);
+
+                case 'p':
+                    return Math.min(100, (value / 0.1) * 100);
+
+                case 'k':
+                    return Math.min(100, (value / 0.2) * 100);
+
+                default:
+                    return 50;
+            }
+        }
+
         window.addEventListener('DOMContentLoaded', async () => {
             initCharts();
             setupEventListeners();
@@ -471,7 +511,6 @@
             });
         }
 
-        // Processing Baris Sheet dengan Pembacaan Header 'Temperature', Agregasi Posisi (2 atau 3 titik), & Angka Negatif
         function processSheetRows(rows) {
             if (!rows || !Array.isArray(rows) || rows.length === 0) return [];
 
@@ -503,7 +542,6 @@
                 };
             }).filter(d => d.heap !== "" && d.heap !== "undefined");
 
-            // Gruping dinamis per Heap & Day (otomatis membagi jumlah baris posisi aktual)
             const aggregated = {};
             rawMapped.forEach(item => {
                 const key = `${item.heap}_${item.day}`;
@@ -665,7 +703,7 @@
             radarChartInst = new Chart(ctxRadar, {
                 type: 'radar',
                 data: {
-                    labels: ['Temperature', 'EC', 'K', 'P', 'N', 'Moisture'],
+                    labels: ['Suhu', 'pH', 'EC', 'Kalium (K)', 'Fosfor (P)', 'Nitrogen (N)', 'Kelembapan'],
                     datasets: []
                 },
                 options: {
@@ -674,10 +712,12 @@
                     plugins: { legend: { labels: { color: '#f8fafc' } } },
                     scales: {
                         r: {
+                            min: 0,
+                            max: 100,
                             angleLines: { color: '#334155' },
                             grid: { color: '#334155' },
                             pointLabels: { color: '#f8fafc', font: { size: 12, weight: 'bold' } },
-                            ticks: { display: false }
+                            ticks: { display: true, color: '#94a3b8', backdropColor: 'transparent', stepSize: 20 }
                         }
                     }
                 }
@@ -891,9 +931,25 @@
                 const avgK = avg(hData.map(d => d.k));
                 const avgFert = avg(hData.map(d => d.fertility));
 
+                const scoreTemp = calculateScore('temperature', avgTemp);
+                const scorePH = calculateScore('ph', avgPH);
+                const scoreEC = calculateScore('ec', avgEC);
+                const scoreK = calculateScore('k', avgK);
+                const scoreP = calculateScore('p', avgP);
+                const scoreN = calculateScore('n', avgN);
+                const scoreMoist = calculateScore('moisture', avgMoist);
+
                 radarDatasets.push({
                     label: `Heap ${heap} (${batch})`,
-                    data: [avgTemp, avgEC, avgK * 20, avgP * 50, avgN * 30, avgMoist],
+                    data: [
+                        Math.round(scoreTemp),
+                        Math.round(scorePH),
+                        Math.round(scoreEC),
+                        Math.round(scoreK),
+                        Math.round(scoreP),
+                        Math.round(scoreN),
+                        Math.round(scoreMoist)
+                    ],
                     borderColor: palette[idx].border,
                     backgroundColor: palette[idx].fill,
                     borderWidth: 2
@@ -902,14 +958,14 @@
                 cardsHTML += `
                     <div class="stat-card">
                         <div class="stat-card-title" style="color: ${palette[idx].border};">Heap ${heap} (${batch})</div>
-                        ${renderStatRow('Temperature', avgTemp.toFixed(1) + ' °C', avgTemp, 80, palette[idx].border)}
-                        ${renderStatRow('Moisture', avgMoist.toFixed(1) + ' %', avgMoist, 100, palette[idx].border)}
-                        ${renderStatRow('EC', avgEC.toFixed(0) + ' µS/cm', avgEC, 3000, palette[idx].border)}
-                        ${renderStatRow('pH', avgPH.toFixed(1), avgPH, 14, palette[idx].border)}
-                        ${renderStatRow('N', avgN.toFixed(2) + ' %', avgN, 3, palette[idx].border)}
-                        ${renderStatRow('P', avgP.toFixed(2) + ' %', avgP, 1, palette[idx].border)}
-                        ${renderStatRow('K', avgK.toFixed(2) + ' %', avgK, 3, palette[idx].border)}
-                        ${renderStatRow('Fertility', avgFert.toFixed(1), avgFert, 5, palette[idx].border)}
+                        ${renderStatRow('Temperature', avgTemp.toFixed(1) + ' °C', scoreTemp, 100, palette[idx].border)}
+                        ${renderStatRow('Moisture', avgMoist.toFixed(1) + ' %', scoreMoist, 100, palette[idx].border)}
+                        ${renderStatRow('EC', avgEC.toFixed(0) + ' µS/cm', scoreEC, 100, palette[idx].border)}
+                        ${renderStatRow('pH', avgPH.toFixed(1), scorePH, 100, palette[idx].border)}
+                        ${renderStatRow('N', avgN.toFixed(2) + ' %', scoreN, 100, palette[idx].border)}
+                        ${renderStatRow('P', avgP.toFixed(2) + ' %', scoreP, 100, palette[idx].border)}
+                        ${renderStatRow('K', avgK.toFixed(2) + ' %', scoreK, 100, palette[idx].border)}
+                        ${renderStatRow('Fertility', avgFert.toFixed(1), Math.min(100, (avgFert / 5) * 100), 100, palette[idx].border)}
                     </div>
                 `;
             });
@@ -925,7 +981,7 @@
             return `
                 <div class="stat-row">
                     <div class="stat-label-val">
-                        <span>${label}</span>
+                        <span>${label} (${Math.round(pct)}%)</span>
                         <span style="font-weight:600; color:var(--text-main);">${valueStr}</span>
                     </div>
                     <div class="stat-bar-bg">
