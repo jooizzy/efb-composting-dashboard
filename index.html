@@ -155,45 +155,6 @@
             gap: 16px;
         }
 
-        .stat-card {
-            background-color: var(--bg-color);
-            border-radius: 8px;
-            padding: 16px;
-            border: 1px solid var(--card-border);
-        }
-
-        .stat-card-title {
-            font-size: 16px;
-            font-weight: 700;
-            text-align: center;
-            margin-bottom: 12px;
-        }
-
-        .stat-row {
-            margin-bottom: 8px;
-        }
-
-        .stat-label-val {
-            display: flex;
-            justify-content: space-between;
-            font-size: 12px;
-            margin-bottom: 4px;
-            color: var(--text-muted);
-        }
-
-        .stat-bar-bg {
-            height: 6px;
-            background-color: var(--card-border);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .stat-bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 0.3s ease;
-        }
-
         .table-responsive {
             overflow-x: auto;
         }
@@ -230,16 +191,6 @@
         tr:hover {
             background-color: rgba(255, 255, 255, 0.02);
         }
-
-        .badge-tag {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 600;
-        }
-
-        .badge-b1 { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
-        .badge-b2 { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
     </style>
 </head>
 <body>
@@ -266,7 +217,7 @@
                     <label for="selectDisplayMode" style="font-size: 13px; color: var(--text-muted);">View Mode:</label>
                     <select id="selectDisplayMode" class="select-control">
                         <option value="combined_temp">Combined Morning & Afternoon Temperature</option>
-                        <option value="separate_temp">Morning Temp vs Afternoon Temp </option>
+                        <option value="separate_temp">Morning Temp vs Afternoon Temp</option>
                         <option value="temp_moisture">Temp & Moisture</option>
                     </select>
                 </div>
@@ -303,83 +254,30 @@
         </div>
     </div>
 
-    <!-- STATS RADAR & BAR SECTION -->
-    <div class="card-grid">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Heap Statistics Comparison (Quality Score 0-100 & Details)</div>
-                <div class="controls-group">
-                    <select id="radarSelect1" class="select-control"></select>
-                    <select id="radarSelect2" class="select-control"></select>
-                    <select id="radarSelect3" class="select-control"></select>
-                    <select id="radarSelect4" class="select-control"></select>
-                </div>
-            </div>
-            <div class="radar-section">
-                <div class="chart-container" style="height: 380px;">
-                    <canvas id="radarChart"></canvas>
-                </div>
-                <div id="radarStatCards" class="heap-stat-cards"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- CARBON & NITROGEN BAR CHARTS -->
-    <div class="card-grid" style="grid-template-columns: 1fr 1fr;">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Carbon & Nitrogen (All Heaps)</div>
-                <div class="controls-group">
-                    <select id="cnBatchSelect" class="select-control">
-                        <option value="B2">Batch 2</option>
-                        <option value="B1">Batch 1</option>
-                    </select>
-                </div>
-            </div>
-            <div class="chart-container" style="height: 320px;">
-                <canvas id="cnAllChart"></canvas>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Carbon & Nitrogen Comparison (Selected Heaps)</div>
-                <div class="controls-group">
-                    <select id="cnCustomBatch" class="select-control">
-                        <option value="B2">Batch 2</option>
-                        <option value="B1">Batch 1</option>
-                    </select>
-                    <span style="font-size:12px; color: var(--text-muted);">Select heaps below</span>
-                </div>
-            </div>
-            <div id="cnHeapCheckboxes" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
-            <div class="chart-container" style="height: 270px;">
-                <canvas id="cnCustomChart"></canvas>
-            </div>
-        </div>
-    </div>
-
     <!-- DETAILED MONITORING TABLE -->
     <div class="card-grid">
         <div class="card">
             <div class="card-header">
                 <div class="card-title">Detailed Batch 1 & Batch 2 Monitoring Table</div>
                 <div class="controls-group">
-                    <input type="text" id="tableSearch" placeholder="Search Heap or Treatment..." class="select-control" style="width: 200px;">
+                    <input type="text" id="tableSearch" placeholder="Search Heap..." class="select-control" style="width: 200px;">
                 </div>
             </div>
             <div class="table-responsive">
                 <table id="monitoringTable">
                     <thead>
                         <tr>
-                            <th onclick="sortTable(0)">Batch ⇅</th>
-                            <th onclick="sortTable(1)">Heap ⇅</th>
-                            <th onclick="sortTable(2)">Treatment ⇅</th>
-                            <th onclick="sortTable(3)">Decomposer ⇅</th>
-                            <th onclick="sortTable(4)">Carbon (%) ⇅</th>
-                            <th onclick="sortTable(5)">Nitrogen (%) ⇅</th>
-                            <th onclick="sortTable(6)">Moisture (%) ⇅</th>
-                            <th onclick="sortTable(7)">Suhu (°C) ⇅</th>
+                            <th>Batch</th>
+                            <th>Heap (Variable)</th>
+                            <th>Day</th>
+                            <th>Suhu (°C)</th>
+                            <th>Moisture (%)</th>
+                            <th>EC</th>
+                            <th>pH</th>
+                            <th>N</th>
+                            <th>P</th>
+                            <th>K</th>
+                            <th>Fertility</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody"></tbody>
@@ -389,7 +287,6 @@
     </div>
 
     <script>
-        // GOOGLE SPREADSHEET IDs & SHEETS CONFIGURATION
         const BATCH2_ID = "1GkNivoXgBinhB6y-hM_JxfhNy-Kt2DE0KG6EStcvTe0";
         const BATCH1_ID = "1UwUsN1I9M9aeGZziCxLqRcloGOWkuYva_vklwbNZXyQ";
 
@@ -397,16 +294,13 @@
         const BATCH1_SHEET_AFTERNOON = "Diisi Recap Data Batch 1 (Afternoon)";
         const BATCH2_SHEET_MORNING = "Diisi Recap Data Batch 2 (Morning)";
         const BATCH2_SHEET_AFTERNOON = "Diisi Recap Data Batch 2 (Afternoon)";
-        const SHEET_HEAP_TREATMENT = "HeapTreatment";
 
-        // Global Data Stores
-        let batch2Data = { morning: [], afternoon: [], treatments: {} };
-        let batch1Data = { morning: [], afternoon: [], treatments: {} };
+        let batch2Data = { morning: [], afternoon: [] };
+        let batch1Data = { morning: [], afternoon: [] };
         let heapListB2 = [];
         let heapListB1 = [];
 
-        // Chart Instances
-        let mainChart, tempCompChart, radarChartInst, cnAllChartInst, cnCustomChartInst;
+        let mainChart, tempCompChart;
 
         window.addEventListener('DOMContentLoaded', async () => {
             initCharts();
@@ -423,22 +317,17 @@
             try {
                 statusEl.innerHTML = `<span class="status-dot" style="background-color:#f59e0b;"></span> Syncing Google Sheets...`;
 
-                const [b1M, b1A, b1T, b2M, b2A, b2T] = await Promise.all([
+                const [b1M, b1A, b2M, b2A] = await Promise.all([
                     fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_MORNING)),
                     fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_AFTERNOON)),
-                    fetchCSV(getGvizUrl(BATCH1_ID, SHEET_HEAP_TREATMENT)),
                     fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_MORNING)),
-                    fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_AFTERNOON)),
-                    fetchCSV(getGvizUrl(BATCH2_ID, SHEET_HEAP_TREATMENT))
+                    fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_AFTERNOON))
                 ]);
 
                 batch1Data.morning = processSheetRows(b1M);
                 batch1Data.afternoon = processSheetRows(b1A);
-                batch1Data.treatments = processTreatmentRows(b1T);
-
                 batch2Data.morning = processSheetRows(b2M);
                 batch2Data.afternoon = processSheetRows(b2A);
-                batch2Data.treatments = processTreatmentRows(b2T);
 
                 heapListB1 = Array.from(new Set(batch1Data.morning.map(d => d.heap))).filter(Boolean).sort();
                 heapListB2 = Array.from(new Set(batch2Data.morning.map(d => d.heap))).filter(Boolean).sort();
@@ -446,15 +335,12 @@
                 initDropdowns();
                 updateMainChart();
                 updateTempCompChart();
-                updateRadarChart();
-                updateCNAllChart();
-                updateCNCustomChart();
                 renderTable();
 
                 statusEl.innerHTML = `<span class="status-dot"></span> Live Google Sheets Connected`;
             } catch (err) {
                 console.error("Error fetching Google Sheets data:", err);
-                statusEl.innerHTML = `<span class="status-dot" style="background-color:#ef4444;"></span> Sync Failed (Check Sheet Permissions)`;
+                statusEl.innerHTML = `<span class="status-dot" style="background-color:#ef4444;"></span> Sync Failed`;
             }
         }
 
@@ -482,16 +368,14 @@
             };
 
             const rawMapped = rows.map(r => {
-                const rawDay = r['Days'] !== undefined ? r['Days'] : 
-                               (r['Day'] !== undefined ? r['Day'] : 
-                               (r['(Morning)'] !== undefined ? r['(Morning)'] : r['(Afternoon)']));
+                const heapVal = r['Variable'] !== undefined ? String(r['Variable']).trim() : '';
+                const dayVal = r['Days'] !== undefined ? parseNum(r['Days']) : parseNum(r['Day']);
 
                 return {
-                    heap: String(r['Variable']).trim(),
-                    day: parseNum(rawDay),
-                    posisi: String(r['Position']).trim(),
-                    temp: parseNum(r['Temperature']),
-                    moisture: parseNum(r['Moisture']),
+                    heap: heapVal,
+                    day: dayVal,
+                    temp: parseNum(r['Temp']),
+                    moisture: parseNum(r['Moist']),
                     ec: parseNum(r['EC']),
                     ph: parseNum(r['pH']),
                     n: parseNum(r['N']),
@@ -511,7 +395,6 @@
                     aggregated[key].moisture += item.moisture;
                     aggregated[key].ec += item.ec;
                     aggregated[key].ph += item.ph;
-                    aggregated[key].carbon += item.carbon;
                     aggregated[key].n += item.n;
                     aggregated[key].p += item.p;
                     aggregated[key].k += item.k;
@@ -522,82 +405,15 @@
 
             return Object.values(aggregated).map(item => ({
                 ...item,
-                temp: item.temp / item.count,
-                moisture: item.moisture / item.count,
-                ec: item.ec / item.count,
-                ph: item.ph / item.count,
-                carbon: item.carbon / item.count,
-                n: item.n / item.count,
-                p: item.p / item.count,
-                k: item.k / item.count,
-                fertility: item.fertility / item.count
-            }));
-        }
-
-        function processTreatmentRows(rows) {
-            if (!rows || !Array.isArray(rows)) return {};
-            const treatmentMap = {};
-            rows.forEach(r => {
-                const heapKey = String(r['Heap'] || '').trim();
-                if (heapKey) {
-                    const decomposer = String(r['Decomposer'] || '').trim();
-                    const liter = String(r['Liter Per 4 Ton'] || r['Liter'] || '').trim();
-                    const chopping = String(r['Chopping'] || '').trim();
-                    const shelter = String(r['Shelter'] || '').trim();
-                    
-                    treatmentMap[heapKey] = {
-                        decomposer: decomposer || 'N/A',
-                        treatment: `${chopping} / ${shelter} (${liter}L)`
-                    };
-                }
-            });
-            return treatmentMap;
-        }
-
-        // ==========================================
-        // LOGIKA SKALA PERFORMA/KUALITAS KOMPOS (0-100)
-        // ==========================================
-        function calcTempScore(temp) {
-            if (temp >= 25 && temp <= 32) return 95; // Ambien Ideal Kompos Matang
-            if (temp >= 33 && temp <= 45) return 80; // Tahap Mesofilik
-            if (temp >= 46 && temp <= 65) return 65; // Tahap Termofilik/Aktif
-            if (temp < 20) return 40;
-            return 30; // Terlalu panas / Overheating (>65)
-        }
-
-        function calcECScore(ec) {
-            if (ec < 500) return Math.min(30, (ec / 500) * 30);
-            if (ec >= 500 && ec <= 1000) return 31 + ((ec - 500) / 500) * 34; // 31-65
-            if (ec > 1000 && ec <= 2000) return 66 + ((ec - 1000) / 1000) * 29; // 66-95 (Sweet Spot)
-            if (ec > 2000 && ec <= 2500) return 96 + ((ec - 2000) / 500) * 4; // 96-100 (Pekat)
-            return Math.max(10, 100 - ((ec - 2500) / 1000) * 40); // >2500 Salin / Asin
-        }
-
-        function calcKScore(k) {
-            if (k >= 1.5 && k <= 3.0) return 90;
-            if (k > 1.0 && k < 1.5) return 75;
-            if (k > 3.0) return 85;
-            return Math.min(60, k * 50);
-        }
-
-        function calcPScore(p) {
-            if (p >= 0.3 && p <= 1.0) return 92;
-            if (p >= 0.1 && p < 0.3) return 70;
-            return Math.min(50, p * 100);
-        }
-
-        function calcNScore(n) {
-            if (n >= 1.5 && n <= 2.5) return 95;
-            if (n >= 1.0 && n < 1.5) return 75;
-            if (n > 2.5) return 85;
-            return Math.min(60, n * 50);
-        }
-
-        function calcMoistureScore(m) {
-            if (m >= 40 && m <= 60) return 90; // Ideal
-            if (m >= 30 && m < 40) return 70;
-            if (m > 60 && m <= 70) return 65;
-            return 40; // Terlalu Kering/Basah
+                temp: +(item.temp / item.count).toFixed(1),
+                moisture: +(item.moisture / item.count).toFixed(1),
+                ec: Math.round(item.ec / item.count),
+                ph: +(item.ph / item.count).toFixed(1),
+                n: Math.round(item.n / item.count),
+                p: Math.round(item.p / item.count),
+                k: Math.round(item.k / item.count),
+                fertility: Math.round(item.fertility / item.count)
+            })).sort((a, b) => a.day - b.day);
         }
 
         function initDropdowns() {
@@ -608,21 +424,6 @@
             ].join('');
 
             updateCompHeapDropdowns();
-
-            const radarSelects = ['radarSelect1', 'radarSelect2', 'radarSelect3', 'radarSelect4'];
-            radarSelects.forEach((id, idx) => {
-                const el = document.getElementById(id);
-                let options = `<option value="">-- None --</option>`;
-                heapListB2.forEach(h => {
-                    options += `<option value="B2_${h}" ${idx === 0 && h === heapListB2[0] ? 'selected' : ''}>Batch 2 - ${h}</option>`;
-                });
-                heapListB1.forEach(h => {
-                    options += `<option value="B1_${h}" ${idx === 1 && h === heapListB1[0] ? 'selected' : ''}>Batch 1 - ${h}</option>`;
-                });
-                el.innerHTML = options;
-            });
-
-            renderCNCheckboxes();
         }
 
         function updateCompHeapDropdowns() {
@@ -658,19 +459,6 @@
             }
         }
 
-        function renderCNCheckboxes() {
-            const batch = document.getElementById('cnCustomBatch').value;
-            const container = document.getElementById('cnHeapCheckboxes');
-            const list = batch === 'B2' ? heapListB2 : heapListB1;
-            
-            container.innerHTML = list.map((h, i) => `
-                <label style="font-size:12px; display:inline-flex; align-items:center; gap:4px; background:var(--bg-color); padding:4px 8px; border-radius:4px; border:1px solid var(--card-border); cursor:pointer;">
-                    <input type="checkbox" class="cn-checkbox" value="${h}" ${i < 4 ? 'checked' : ''} onchange="updateCNCustomChart()">
-                    ${h}
-                </label>
-            `).join('');
-        }
-
         function initCharts() {
             const ctxMain = document.getElementById('mainHeapChart').getContext('2d');
             mainChart = new Chart(ctxMain, {
@@ -679,11 +467,9 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    spanGaps: true,
-                    plugins: { legend: { labels: { color: '#f8fafc' } } },
                     scales: {
                         x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Value', color: '#94a3b8' } }
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
                     }
                 }
             });
@@ -695,71 +481,6 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    spanGaps: true,
-                    plugins: { legend: { labels: { color: '#f8fafc' } } },
-                    scales: {
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
-                    }
-                }
-            });
-
-            const ctxRadar = document.getElementById('radarChart').getContext('2d');
-            radarChartInst = new Chart(ctxRadar, {
-                type: 'radar',
-                data: {
-                    labels: ['Temperature', 'EC', 'K', 'P', 'N', 'Moisture'],
-                    datasets: []
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { labels: { color: '#f8fafc' } },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label} (${context.label}): ${context.raw} / 100 (Indeks Optimal)`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        r: {
-                            min: 0,
-                            max: 100,
-                            angleLines: { color: '#334155' },
-                            grid: { color: '#334155' },
-                            pointLabels: { color: '#f8fafc', font: { size: 12, weight: 'bold' } },
-                            ticks: { display: true, color: '#94a3b8', backdropColor: 'transparent', stepSize: 20 }
-                        }
-                    }
-                }
-            });
-
-            const ctxCNAll = document.getElementById('cnAllChart').getContext('2d');
-            cnAllChartInst = new Chart(ctxCNAll, {
-                type: 'bar',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#f8fafc' } } },
-                    scales: {
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
-                    }
-                }
-            });
-
-            const ctxCNCustom = document.getElementById('cnCustomChart').getContext('2d');
-            cnCustomChartInst = new Chart(ctxCNCustom, {
-                type: 'bar',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#f8fafc' } } },
                     scales: {
                         x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
                         y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
@@ -771,24 +492,12 @@
         function setupEventListeners() {
             document.getElementById('selectMainHeap').addEventListener('change', updateMainChart);
             document.getElementById('selectDisplayMode').addEventListener('change', updateMainChart);
-
             document.getElementById('selectCompBatch').addEventListener('change', () => {
                 updateCompHeapDropdowns();
                 updateTempCompChart();
             });
             document.getElementById('selectCompHeap1').addEventListener('change', updateTempCompChart);
             document.getElementById('selectCompHeap2').addEventListener('change', updateTempCompChart);
-
-            ['radarSelect1', 'radarSelect2', 'radarSelect3', 'radarSelect4'].forEach(id => {
-                document.getElementById(id).addEventListener('change', updateRadarChart);
-            });
-
-            document.getElementById('cnBatchSelect').addEventListener('change', updateCNAllChart);
-            document.getElementById('cnCustomBatch').addEventListener('change', () => {
-                renderCNCheckboxes();
-                updateCNCustomChart();
-            });
-
             document.getElementById('tableSearch').addEventListener('input', renderTable);
         }
 
@@ -797,323 +506,92 @@
             if (!rawVal) return;
             const [batchKey, heap] = rawVal.split('_');
             const mode = document.getElementById('selectDisplayMode').value;
-
             const datasetStore = batchKey === 'B2' ? batch2Data : batch1Data;
+
             const mData = datasetStore.morning.filter(d => d.heap === heap);
             const aData = datasetStore.afternoon.filter(d => d.heap === heap);
 
-            const days = mData.map(d => `Day ${d.day}`);
+            const days = Array.from(new Set([...mData.map(d => d.day), ...aData.map(d => d.day)])).sort((a,b)=>a-b);
+            
             let datasets = [];
 
-            if (mode === 'combined_temp') {
-                const avgTemps = mData.map(d => {
-                    const matchA = aData.find(a => a.day === d.day);
-                    const aTemp = matchA ? matchA.temp : d.temp;
-                    return Math.round(((d.temp + aTemp) / 2) * 10) / 10;
-                });
-                datasets.push({
-                    label: `Average Temperature (°C) - ${batchKey} Heap ${heap}`,
-                    data: avgTemps,
-                    borderColor: '#ff0099',
-                    backgroundColor: 'rgba(255, 0, 153, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true
-                });
-            } else if (mode === 'separate_temp') {
-                datasets.push({
-                    label: `Morning Temp (°C)`,
-                    data: mData.map(d => d.temp),
-                    borderColor: '#ff0099',
-                    borderWidth: 2,
-                    tension: 0.3
-                });
-                datasets.push({
-                    label: `Afternoon Temp (°C)`,
-                    data: days.map((_, i) => {
-                        const matchA = aData.find(a => a.day === mData[i].day);
-                        return matchA ? matchA.temp : null;
-                    }),
-                    borderColor: '#8f8f8f',
-                    borderWidth: 2,
-                    tension: 0.3
-                });
+            if (mode === 'separate_temp') {
+                datasets = [
+                    { label: 'Morning Temp (°C)', data: days.map(day => (mData.find(d => d.day === day) || {}).temp || null), borderColor: '#00a0fc', tension: 0.3 },
+                    { label: 'Afternoon Temp (°C)', data: days.map(day => (aData.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 }
+                ];
             } else if (mode === 'temp_moisture') {
-                const avgTemps = mData.map(d => {
-                    const matchA = aData.find(a => a.day === d.day);
-                    const aTemp = matchA ? matchA.temp : d.temp;
-                    return Math.round(((d.temp + aTemp) / 2) * 10) / 10;
-                });
-                datasets.push({
-                    label: `Average Temp (°C)`,
-                    data: avgTemps,
-                    borderColor: '#ff0099',
-                    borderWidth: 2,
-                    tension: 0.3
-                });
-                datasets.push({
-                    label: `Moisture (%)`,
-                    data: mData.map(d => d.moisture),
-                    borderColor: '#00a0fc',
-                    borderWidth: 2,
-                    tension: 0.3
-                });
+                datasets = [
+                    { label: 'Temp (°C)', data: days.map(day => (mData.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 },
+                    { label: 'Moisture (%)', data: days.map(day => (mData.find(d => d.day === day) || {}).moisture || null), borderColor: '#00a0fc', tension: 0.3 }
+                ];
+            } else {
+                datasets = [
+                    { 
+                        label: 'Avg Temperature (°C)', 
+                        data: days.map(day => {
+                            const m = mData.find(d => d.day === day);
+                            const a = aData.find(d => d.day === day);
+                            if (m && a) return (m.temp + a.temp) / 2;
+                            return (m || a || {}).temp || null;
+                        }), 
+                        borderColor: '#3b82f6', 
+                        tension: 0.3 
+                    }
+                ];
             }
 
-            mainChart.data.labels = days;
+            mainChart.data.labels = days.map(d => `Day ${d}`);
             mainChart.data.datasets = datasets;
             mainChart.update();
         }
 
         function updateTempCompChart() {
-            const val1 = document.getElementById('selectCompHeap1').value;
-            const val2 = document.getElementById('selectCompHeap2').value;
+            const h1Val = document.getElementById('selectCompHeap1').value;
+            const h2Val = document.getElementById('selectCompHeap2').value;
+            if (!h1Val || !h2Val) return;
 
-            if (!val1 || !val2) return;
+            const [b1Key, h1] = h1Val.split('_');
+            const [b2Key, h2] = h2Val.split('_');
 
-            const parseSelection = (val) => {
-                const [batch, heap] = val.split('_');
-                const store = batch === 'B2' ? batch2Data.morning : batch1Data.morning;
-                return { batch, heap, data: store.filter(d => d.heap === heap) };
-            };
+            const data1 = (b1Key === 'B2' ? batch2Data : batch1Data).morning.filter(d => d.heap === h1);
+            const data2 = (b2Key === 'B2' ? batch2Data : batch1Data).morning.filter(d => d.heap === h2);
 
-            const h1 = parseSelection(val1);
-            const h2 = parseSelection(val2);
+            const days = Array.from(new Set([...data1.map(d => d.day), ...data2.map(d => d.day)])).sort((a,b)=>a-b);
 
-            const allDaysSet = new Set([
-                ...h1.data.map(d => d.day),
-                ...h2.data.map(d => d.day)
-            ]);
-            const sortedDays = Array.from(allDaysSet).sort((a, b) => a - b);
-
-            const mapDataToDays = (heapObj) => {
-                const dayMap = {};
-                heapObj.data.forEach(d => dayMap[d.day] = d.temp);
-                return sortedDays.map(day => (dayMap[day] !== undefined ? dayMap[day] : null));
-            };
-
-            const datasets = [
-                {
-                    label: `${h1.batch} - Heap ${h1.heap}`,
-                    data: mapDataToDays(h1),
-                    borderColor: '#ff0099',
-                    borderWidth: 2,
-                    tension: 0.3
-                },
-                {
-                    label: `${h2.batch} - Heap ${h2.heap}`,
-                    data: mapDataToDays(h2),
-                    borderColor: '#00a0fc',
-                    borderWidth: 2,
-                    borderDash: (h1.batch !== h2.batch) ? [5, 5] : [],
-                    tension: 0.3
-                }
+            tempCompChart.data.labels = days.map(d => `Day ${d}`);
+            tempCompChart.data.datasets = [
+                { label: `${b1Key} - Heap ${h1}`, data: days.map(day => (data1.find(d => d.day === day) || {}).temp || null), borderColor: '#3b82f6', tension: 0.3 },
+                { label: `${b2Key} - Heap ${h2}`, data: days.map(day => (data2.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 }
             ];
-
-            tempCompChart.data.labels = sortedDays.map(d => `Day ${d}`);
-            tempCompChart.data.datasets = datasets;
             tempCompChart.update();
         }
 
-        function updateRadarChart() {
-            const selects = ['radarSelect1', 'radarSelect2', 'radarSelect3', 'radarSelect4'];
-            const chosen = selects.map(id => document.getElementById(id).value).filter(Boolean);
-
-            const palette = [
-                { border: '#ff0099', fill: 'rgba(255, 0, 153, 0.2)' },
-                { border: '#00a0fc', fill: 'rgba(0, 160, 252, 0.2)' },
-                { border: '#fcd372', fill: 'rgba(252, 211, 114, 0.2)' },
-                { border: '#abffdf', fill: 'rgba(171, 255, 223, 0.2)' }
-            ];
-
-            let radarDatasets = [];
-            let cardsHTML = '';
-
-            chosen.forEach((key, idx) => {
-                const [batch, heap] = key.split('_');
-                const dataset = batch === 'B2' ? batch2Data.morning : batch1Data.morning;
-                const hData = dataset.filter(d => d.heap === heap);
-
-                if (hData.length === 0) return;
-
-                const avgTemp = avg(hData.map(d => d.temp));
-                const avgMoist = avg(hData.map(d => d.moisture));
-                const avgEC = avg(hData.map(d => d.ec));
-                const avgPH = avg(hData.map(d => d.ph));
-                const avgN = avg(hData.map(d => d.n));
-                const avgP = avg(hData.map(d => d.p));
-                const avgK = avg(hData.map(d => d.k));
-                const avgFert = avg(hData.map(d => d.fertility));
-
-                // Konversi data absolut ke Skala Performa / Kualitas (0 - 100)
-                const scoreTemp = Math.round(calcTempScore(avgTemp));
-                const scoreEC = Math.round(calcECScore(avgEC));
-                const scoreK = Math.round(calcKScore(avgK));
-                const scoreP = Math.round(calcPScore(avgP));
-                const scoreN = Math.round(calcNScore(avgN));
-                const scoreMoist = Math.round(calcMoistureScore(avgMoist));
-
-                radarDatasets.push({
-                    label: `Heap ${heap} (${batch})`,
-                    data: [scoreTemp, scoreEC, scoreK, scoreP, scoreN, scoreMoist],
-                    borderColor: palette[idx].border,
-                    backgroundColor: palette[idx].fill,
-                    borderWidth: 2
-                });
-
-                cardsHTML += `
-                    <div class="stat-card">
-                        <div class="stat-card-title" style="color: ${palette[idx].border};">Heap ${heap} (${batch})</div>
-                        ${renderStatRow('Temperature', avgTemp.toFixed(1) + ' °C', scoreTemp, 100, palette[idx].border)}
-                        ${renderStatRow('Moisture', avgMoist.toFixed(1) + ' %', scoreMoist, 100, palette[idx].border)}
-                        ${renderStatRow('EC', avgEC.toFixed(0) + ' µS/cm', scoreEC, 100, palette[idx].border)}
-                        ${renderStatRow('pH', avgPH.toFixed(1), (avgPH/14)*100, 100, palette[idx].border)}
-                        ${renderStatRow('N', avgN.toFixed(2) + ' %', scoreN, 100, palette[idx].border)}
-                        ${renderStatRow('P', avgP.toFixed(2) + ' %', scoreP, 100, palette[idx].border)}
-                        ${renderStatRow('K', avgK.toFixed(2) + ' %', scoreK, 100, palette[idx].border)}
-                        ${renderStatRow('Fertility', avgFert.toFixed(1), (avgFert/5)*100, 100, palette[idx].border)}
-                    </div>
-                `;
-            });
-
-            radarChartInst.data.datasets = radarDatasets;
-            radarChartInst.update();
-
-            document.getElementById('radarStatCards').innerHTML = cardsHTML;
-        }
-
-        function renderStatRow(label, valueStr, pctVal, maxVal, color) {
-            const pct = Math.min(100, Math.max(0, (pctVal / maxVal) * 100));
-            return `
-                <div class="stat-row">
-                    <div class="stat-label-val">
-                        <span>${label}</span>
-                        <span style="font-weight:600; color:var(--text-main);">${valueStr}</span>
-                    </div>
-                    <div class="stat-bar-bg">
-                        <div class="stat-bar-fill" style="width: ${pct}%; background-color: ${color};"></div>
-                    </div>
-                </div>
-            `;
-        }
-
-        function updateCNAllChart() {
-            const batch = document.getElementById('cnBatchSelect').value;
-            const list = batch === 'B2' ? heapListB2 : heapListB1;
-            const dataset = batch === 'B2' ? batch2Data.morning : batch1Data.morning;
-
-            const cVals = list.map(h => avg(dataset.filter(d => d.heap === h).map(d => d.carbon)));
-            const nVals = list.map(h => avg(dataset.filter(d => d.heap === h).map(d => d.n)));
-
-            cnAllChartInst.data.labels = list.map(h => `Heap ${h}`);
-            cnAllChartInst.data.datasets = [
-                { label: 'Carbon (%)', data: cVals, backgroundColor: '#fcd372' },
-                { label: 'Nitrogen (%)', data: nVals, backgroundColor: '#abffdf' }
-            ];
-            cnAllChartInst.update();
-        }
-
-        function updateCNCustomChart() {
-            const batch = document.getElementById('cnCustomBatch').value;
-            const dataset = batch === 'B2' ? batch2Data.morning : batch1Data.morning;
-            const checkedBoxes = Array.from(document.querySelectorAll('.cn-checkbox:checked')).map(cb => cb.value);
-
-            const cVals = checkedBoxes.map(h => avg(dataset.filter(d => d.heap === h).map(d => d.carbon)));
-            const nVals = checkedBoxes.map(h => avg(dataset.filter(d => d.heap === h).map(d => d.n)));
-
-            cnCustomChartInst.data.labels = checkedBoxes.map(h => `Heap ${h}`);
-            cnCustomChartInst.data.datasets = [
-                { label: 'Carbon (%)', data: cVals, backgroundColor: '#fcd372' },
-                { label: 'Nitrogen (%)', data: nVals, backgroundColor: '#abffdf' }
-            ];
-            cnCustomChartInst.update();
-        }
-
         function renderTable() {
-            const query = document.getElementById('tableSearch').value.toLowerCase();
-            const tbody = document.getElementById('tableBody');
+            const search = document.getElementById('tableSearch').value.toLowerCase();
+            const body = document.getElementById('tableBody');
+            
+            const combineRows = (batchName, list) => list.map(d => ({ ...d, batch: batchName }));
+            const allData = [
+                ...combineRows('Batch 2', batch2Data.morning),
+                ...combineRows('Batch 1', batch1Data.morning)
+            ].filter(d => String(d.heap).toLowerCase().includes(search));
 
-            let rows = [];
-
-            heapListB2.forEach(h => {
-                const mData = batch2Data.morning.filter(d => d.heap === h);
-                const tInfo = batch2Data.treatments[h] || { treatment: 'N/A', decomposer: 'N/A' };
-                rows.push({
-                    batch: 'Batch 2',
-                    heap: h,
-                    treatment: tInfo.treatment,
-                    decomposer: tInfo.decomposer,
-                    carbon: avg(mData.map(d => d.carbon)).toFixed(1),
-                    nitrogen: avg(mData.map(d => d.n)).toFixed(2),
-                    moisture: avg(mData.map(d => d.moisture)).toFixed(1),
-                    temp: avg(mData.map(d => d.temp)).toFixed(1)
-                });
-            });
-
-            heapListB1.forEach(h => {
-                const mData = batch1Data.morning.filter(d => d.heap === h);
-                const tInfo = batch1Data.treatments[h] || { treatment: 'N/A', decomposer: 'N/A' };
-                rows.push({
-                    batch: 'Batch 1',
-                    heap: h,
-                    treatment: tInfo.treatment,
-                    decomposer: tInfo.decomposer,
-                    carbon: avg(mData.map(d => d.carbon)).toFixed(1),
-                    nitrogen: avg(mData.map(d => d.n)).toFixed(2),
-                    moisture: avg(mData.map(d => d.moisture)).toFixed(1),
-                    temp: avg(mData.map(d => d.temp)).toFixed(1)
-                });
-            });
-
-            const filtered = rows.filter(r => 
-                r.heap.toLowerCase().includes(query) || 
-                r.treatment.toLowerCase().includes(query) ||
-                r.decomposer.toLowerCase().includes(query) ||
-                r.batch.toLowerCase().includes(query)
-            );
-
-            tbody.innerHTML = filtered.map(r => `
+            body.innerHTML = allData.slice(0, 50).map(d => `
                 <tr>
-                    <td><span class="badge-tag ${r.batch === 'Batch 2' ? 'badge-b2' : 'badge-b1'}">${r.batch}</span></td>
-                    <td><strong>Heap ${r.heap}</strong></td>
-                    <td>${r.treatment}</td>
-                    <td>${r.decomposer}</td>
-                    <td>${r.carbon} %</td>
-                    <td>${r.nitrogen} %</td>
-                    <td>${r.moisture} %</td>
-                    <td><strong>${r.temp} °C</strong></td>
+                    <td>${d.batch}</td>
+                    <td><b>${d.heap}</b></td>
+                    <td>${d.day}</td>
+                    <td>${d.temp}°C</td>
+                    <td>${d.moisture}%</td>
+                    <td>${d.ec}</td>
+                    <td>${d.ph}</td>
+                    <td>${d.n}</td>
+                    <td>${d.p}</td>
+                    <td>${d.k}</td>
+                    <td>${d.fertility}</td>
                 </tr>
             `).join('');
-        }
-
-        function avg(arr) {
-            if (!arr || arr.length === 0) return 0;
-            const validNums = arr.filter(n => typeof n === 'number' && !isNaN(n));
-            if (validNums.length === 0) return 0;
-            return validNums.reduce((a, b) => a + b, 0) / validNums.length;
-        }
-
-        let sortDir = 1;
-        function sortTable(colIdx) {
-            const table = document.getElementById("monitoringTable");
-            const tbody = table.querySelector("tbody");
-            const rows = Array.from(tbody.querySelectorAll("tr"));
-
-            rows.sort((a, b) => {
-                const cellA = a.children[colIdx].innerText.replace(/[%°C]/g, '').trim();
-                const cellB = b.children[colIdx].innerText.replace(/[%°C]/g, '').trim();
-
-                const numA = parseFloat(cellA);
-                const numB = parseFloat(cellB);
-
-                if (!isNaN(numA) && !isNaN(numB)) {
-                    return (numA - numB) * sortDir;
-                }
-                return cellA.localeCompare(cellB) * sortDir;
-            });
-
-            sortDir *= -1;
-            rows.forEach(r => tbody.appendChild(r));
         }
     </script>
 </body>
