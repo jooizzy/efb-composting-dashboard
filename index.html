@@ -1,598 +1,822 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EFB Composting Monitoring Dashboard</title>
-    <!-- Chart.js & PapaParse -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --card-border: #334155;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent-pink: #ff0099;
-            --accent-blue: #00a0fc;
-            --accent-grey: #8f8f8f;
-            --accent-carbon: #fcd372;
-            --accent-nitrogen: #abffdf;
-            --primary: #3b82f6;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Main EFB Composting & Analysis Dashboard</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- PapaParse -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-        }
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+    }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 24px;
-            line-height: 1.5;
-        }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
 
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--card-border);
-        }
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
 
-        .dashboard-title h1 {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-main);
-        }
+    .select-control {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
 
-        .dashboard-title p {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
+    .select-control:focus {
+      border-color: var(--primary);
+    }
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background-color: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-        }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #10b981;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .card-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
-            margin-bottom: 24px;
-        }
-
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .card-header {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
-        .controls-group {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .select-control {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            border: 1px solid var(--card-border);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            outline: none;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-        .select-control:focus {
-            border-color: var(--primary);
-        }
-
-        .chart-container {
-            position: relative;
-            width: 100%;
-            height: 380px;
-        }
-
-        .radar-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-        }
-
-        @media (max-width: 992px) {
-            .radar-section {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .heap-stat-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 13px;
-        }
-
-        th {
-            background-color: var(--bg-color);
-            color: var(--text-muted);
-            padding: 12px 16px;
-            font-weight: 600;
-            border-bottom: 1px solid var(--card-border);
-            cursor: pointer;
-            user-select: none;
-            white-space: nowrap;
-        }
-
-        th:hover {
-            color: var(--text-main);
-        }
-
-        td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--card-border);
-            color: var(--text-main);
-            white-space: nowrap;
-        }
-
-        tr:hover {
-            background-color: rgba(255, 255, 255, 0.02);
-        }
-    </style>
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="dashboard-header">
-        <div class="dashboard-title">
-            <h1>EFB Composting Monitoring Dashboard</h1>
-            <p>Real-time Tracking & Multi-Batch Comparative Analysis for Empty Fruit Bunch Composting</p>
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-4 border-b border-slate-700 gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-white">Main EFB Composting Dashboard</h1>
+      <p class="text-sm text-slate-400">Real-time Tracking & Multi-Batch Comparative Analysis for Empty Fruit Bunch Composting</p>
+    </div>
+    <div class="status-badge" id="syncStatus">
+      <span class="status-dot"></span> Synchronizing Data...
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-6">
+
+    <!-- SECTION 1: Heap Temperature & Moisture Trend -->
+    <div class="card">
+      <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+        <h2 class="text-lg font-semibold text-white">Heap Temperature & Moisture Trend</h2>
+        <div class="flex flex-wrap items-center gap-3">
+          <label for="selectMainHeap" class="text-xs text-slate-400">Heap:</label>
+          <select id="selectMainHeap" class="select-control"></select>
+
+          <label for="selectDisplayMode" class="text-xs text-slate-400">View Mode:</label>
+          <select id="selectDisplayMode" class="select-control">
+            <option value="combined_temp">Combined Morning & Afternoon Temperature</option>
+            <option value="separate_temp">Morning Temp vs Afternoon Temp</option>
+            <option value="temp_moisture">Temp & Moisture</option>
+          </select>
         </div>
-        <div class="status-badge" id="syncStatus">
-            <span class="status-dot"></span> Synchronizing Data...
-        </div>
+      </div>
+      <div class="h-[380px] w-full relative">
+        <canvas id="mainHeapChart"></canvas>
+      </div>
     </div>
 
-    <!-- MAIN CHART SECTION -->
-    <div class="card-grid">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Heap Temperature & Moisture Trend</div>
-                <div class="controls-group">
-                    <label for="selectMainHeap" style="font-size: 13px; color: var(--text-muted);">Heap:</label>
-                    <select id="selectMainHeap" class="select-control"></select>
+    <!-- SECTION 2: Temperature Heap Comparison -->
+    <div class="card">
+      <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+        <h2 class="text-lg font-semibold text-white">Temperature Heap Comparison</h2>
+        <div class="flex flex-wrap items-center gap-3">
+          <label for="selectCompBatch" class="text-xs text-slate-400">Batch Compare Mode:</label>
+          <select id="selectCompBatch" class="select-control">
+            <option value="B2">Batch 2 Only</option>
+            <option value="B1">Batch 1 Only</option>
+            <option value="B1_VS_B2">Batch 1 vs Batch 2</option>
+          </select>
 
-                    <label for="selectDisplayMode" style="font-size: 13px; color: var(--text-muted);">View Mode:</label>
-                    <select id="selectDisplayMode" class="select-control">
-                        <option value="combined_temp">Combined Morning & Afternoon Temperature</option>
-                        <option value="separate_temp">Morning Temp vs Afternoon Temp</option>
-                        <option value="temp_moisture">Temp & Moisture</option>
-                    </select>
-                </div>
-            </div>
-            <div class="chart-container">
-                <canvas id="mainHeapChart"></canvas>
-            </div>
+          <label for="selectCompHeap1" class="text-xs text-slate-400">Heap A:</label>
+          <select id="selectCompHeap1" class="select-control"></select>
+
+          <label for="selectCompHeap2" class="text-xs text-slate-400">Heap B:</label>
+          <select id="selectCompHeap2" class="select-control"></select>
         </div>
+      </div>
+      <div class="h-[380px] w-full relative">
+        <canvas id="tempComparisonChart"></canvas>
+      </div>
     </div>
 
-    <!-- COMPARISON LINE CHART -->
-    <div class="card-grid">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Temperature Heap Comparison</div>
-                <div class="controls-group">
-                    <label for="selectCompBatch" style="font-size: 13px; color: var(--text-muted);">Batch Compare Mode:</label>
-                    <select id="selectCompBatch" class="select-control">
-                        <option value="B2">Batch 2 Only</option>
-                        <option value="B1">Batch 1 Only</option>
-                        <option value="B1_VS_B2">Batch 1 vs Batch 2</option>
-                    </select>
-
-                    <label for="selectCompHeap1" style="font-size: 13px; color: var(--text-muted);">Heap A:</label>
-                    <select id="selectCompHeap1" class="select-control"></select>
-
-                    <label for="selectCompHeap2" style="font-size: 13px; color: var(--text-muted);">Heap B:</label>
-                    <select id="selectCompHeap2" class="select-control"></select>
-                </div>
-            </div>
-            <div class="chart-container">
-                <canvas id="tempComparisonChart"></canvas>
-            </div>
+    <!-- SECTION 3: Detailed Heap (Replaces Old Detailed Monitoring Table) -->
+    <div class="card">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-slate-700/60 pb-4">
+        <div>
+          <h2 class="text-xl font-bold text-blue-400 flex items-center gap-2">
+            Detailed Heap <span id="selectedHeapLabel" class="text-sm px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full font-normal">Active Heap: -</span>
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Temperature & Moisture Dynamic Analysis (Variable 2.1B Reference)</p>
         </div>
+        <div class="flex items-center gap-3 w-full md:w-auto">
+          <label for="chartSelector" class="text-sm font-semibold text-blue-300 whitespace-nowrap">Select Analysis View:</label>
+          <select id="chartSelector" onchange="renderSelectedChart()" class="select-control w-full md:w-auto cursor-pointer border-blue-500/50">
+            <option value="1">1. Daily Average Temperature</option>
+            <option value="2">2. Average Temp & Moisture per Session (Morning & Afternoon)</option>
+            <option value="3">3. Temperature Comparison per Sampling Point (A, B, C) & Position</option>
+            <option value="4">4. Position Comparison: Top (Red), Middle (Yellow), Bottom (Green)</option>
+            <option value="5">5. Morning vs Afternoon Average Temperature Comparison</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Detailed Heap Chart Container -->
+      <div id="detailedHeapContainer" class="relative">
+        <h3 id="chartTitle" class="text-md font-medium mb-4 text-slate-300 text-center md:text-left">
+          1. Daily Average Temperature
+        </h3>
+        <div class="h-[520px] w-full">
+          <canvas id="detailedHeapChart"></canvas>
+        </div>
+      </div>
     </div>
 
-    <!-- DETAILED MONITORING TABLE -->
-    <div class="card-grid">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">Detailed Batch 1 & Batch 2 Monitoring Table</div>
-                <div class="controls-group">
-                    <input type="text" id="tableSearch" placeholder="Search Heap..." class="select-control" style="width: 200px;">
-                </div>
-            </div>
-            <div class="table-responsive">
-                <table id="monitoringTable">
-                    <thead>
-                        <tr>
-                            <th>Batch</th>
-                            <th>Heap (Variable)</th>
-                            <th>Day</th>
-                            <th>Suhu (°C)</th>
-                            <th>Moisture (%)</th>
-                            <th>EC</th>
-                            <th>pH</th>
-                            <th>N</th>
-                            <th>P</th>
-                            <th>K</th>
-                            <th>Fertility</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+  </div>
 
-    <script>
-        const BATCH2_ID = "1GkNivoXgBinhB6y-hM_JxfhNy-Kt2DE0KG6EStcvTe0";
-        const BATCH1_ID = "1UwUsN1I9M9aeGZziCxLqRcloGOWkuYva_vklwbNZXyQ";
+  <script>
+    // Spreadsheets References
+    const BATCH2_ID = "1GkNivoXgBinhB6y-hM_JxfhNy-Kt2DE0KG6EStcvTe0";
+    const BATCH1_ID = "1UwUsN1I9M9aeGZziCxLqRcloGOWkuYva_vklwbNZXyQ";
+    const DETAILED_SHEET_ID = "149BvvoHpkQ-53Zkhx1OFtLTpesTnj1FjF98-HrxGnZE";
 
-        const BATCH1_SHEET_MORNING = "Batch 1 Morning";
-        const BATCH1_SHEET_AFTERNOON = "Batch 1 Afternoon";
-        const BATCH2_SHEET_MORNING = "Batch 2 Morning";
-        const BATCH2_SHEET_AFTERNOON = "Batch 2 Afternoon";
+    const BATCH1_SHEET_MORNING = "Batch 1 Morning";
+    const BATCH1_SHEET_AFTERNOON = "Batch 1 Afternoon";
+    const BATCH2_SHEET_MORNING = "Batch 2 Morning";
+    const BATCH2_SHEET_AFTERNOON = "Batch 2 Afternoon";
 
-        let batch2Data = { morning: [], afternoon: [] };
-        let batch1Data = { morning: [], afternoon: [] };
-        let heapListB2 = [];
-        let heapListB1 = [];
+    let batch2Data = { morning: [], afternoon: [] };
+    let batch1Data = { morning: [], afternoon: [] };
+    let heapListB2 = [];
+    let heapListB1 = [];
 
-        let mainChart, tempCompChart;
+    let globalValidData = [];
+    let activeDetailedChart = null;
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            initCharts();
-            setupEventListeners();
-            await fetchSpreadsheetData();
+    let mainChart, tempCompChart;
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      initCharts();
+      setupEventListeners();
+      await fetchAllData();
+    });
+
+    function getGvizUrl(spreadsheetId, sheetName) {
+      if (sheetName) {
+        return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+      }
+      return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
+    }
+
+    async function fetchAllData() {
+      const statusEl = document.getElementById('syncStatus');
+      try {
+        statusEl.innerHTML = `<span class="status-dot" style="background-color:#f59e0b;"></span> Syncing Data...`;
+
+        const [b1M, b1A, b2M, b2A, detailedRaw] = await Promise.all([
+          fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_MORNING)),
+          fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_AFTERNOON)),
+          fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_MORNING)),
+          fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_AFTERNOON)),
+          fetchCSV(getGvizUrl(DETAILED_SHEET_ID))
+        ]);
+
+        batch1Data.morning = processSheetRows(b1M);
+        batch1Data.afternoon = processSheetRows(b1A);
+        batch2Data.morning = processSheetRows(b2M);
+        batch2Data.afternoon = processSheetRows(b2A);
+
+        heapListB1 = Array.from(new Set(batch1Data.morning.map(d => d.heap))).filter(Boolean).sort();
+        heapListB2 = Array.from(new Set(batch2Data.morning.map(d => d.heap))).filter(Boolean).sort();
+
+        globalValidData = detailedRaw.filter(r => r.Days !== undefined && r.Days !== null && r.Temp !== undefined && r.Temp !== null);
+
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = '#334155';
+
+        initDropdowns();
+        updateMainChart();
+        updateTempCompChart();
+
+        statusEl.innerHTML = `<span class="status-dot"></span> Live Google Sheets Connected`;
+      } catch (err) {
+        console.error("Error fetching Google Sheets data:", err);
+        statusEl.innerHTML = `<span class="status-dot" style="background-color:#ef4444;"></span> Sync Failed`;
+      }
+    }
+
+    function fetchCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true,
+          complete: results => resolve(results.data),
+          error: err => reject(err)
+        });
+      });
+    }
+
+    function processSheetRows(rows) {
+      if (!rows || !Array.isArray(rows) || rows.length === 0) return [];
+
+      const parseNum = (val) => {
+        if (val === undefined || val === null || val === '') return 0;
+        let strVal = String(val).replace(',', '.').trim();
+        let num = parseFloat(strVal);
+        return isNaN(num) ? 0 : num;
+      };
+
+      const rawMapped = rows.map(r => {
+        const heapVal = r['Variable'] !== undefined ? String(r['Variable']).trim() : '';
+        const dayVal = r['Days'] !== undefined ? parseNum(r['Days']) : parseNum(r['Day']);
+
+        return {
+          heap: heapVal,
+          day: dayVal,
+          temp: parseNum(r['Temp']),
+          moisture: parseNum(r['Moist']),
+          ec: parseNum(r['EC']),
+          ph: parseNum(r['pH']),
+          n: parseNum(r['N']),
+          p: parseNum(r['P']),
+          k: parseNum(r['K']),
+          fertility: parseNum(r['Fertility'])
+        };
+      }).filter(d => d.heap !== "" && d.heap !== "undefined");
+
+      const aggregated = {};
+      rawMapped.forEach(item => {
+        const key = `${item.heap}_${item.day}`;
+        if (!aggregated[key]) {
+          aggregated[key] = { ...item, count: 1 };
+        } else {
+          aggregated[key].temp += item.temp;
+          aggregated[key].moisture += item.moisture;
+          aggregated[key].ec += item.ec;
+          aggregated[key].ph += item.ph;
+          aggregated[key].n += item.n;
+          aggregated[key].p += item.p;
+          aggregated[key].k += item.k;
+          aggregated[key].fertility += item.fertility;
+          aggregated[key].count += 1;
+        }
+      });
+
+      return Object.values(aggregated).map(item => ({
+        ...item,
+        temp: +(item.temp / item.count).toFixed(1),
+        moisture: +(item.moisture / item.count).toFixed(1)
+      })).sort((a, b) => a.day - b.day);
+    }
+
+    function initDropdowns() {
+      const mainHeapSelect = document.getElementById('selectMainHeap');
+      mainHeapSelect.innerHTML = [
+        ...heapListB2.map(h => `<option value="B2_${h}">Batch 2 - Heap ${h}</option>`),
+        ...heapListB1.map(h => `<option value="B1_${h}">Batch 1 - Heap ${h}</option>`)
+      ].join('');
+
+      updateCompHeapDropdowns();
+    }
+
+    function updateCompHeapDropdowns() {
+      const mode = document.getElementById('selectCompBatch').value;
+      const h1Select = document.getElementById('selectCompHeap1');
+      const h2Select = document.getElementById('selectCompHeap2');
+
+      let options1 = '', options2 = '';
+
+      if (mode === 'B2') {
+        options1 = heapListB2.map(h => `<option value="B2_${h}">Batch 2 - Heap ${h}</option>`).join('');
+        options2 = heapListB2.map(h => `<option value="B2_${h}">Batch 2 - Heap ${h}</option>`).join('');
+      } else if (mode === 'B1') {
+        options1 = heapListB1.map(h => `<option value="B1_${h}">Batch 1 - Heap ${h}</option>`).join('');
+        options2 = heapListB1.map(h => `<option value="B1_${h}">Batch 1 - Heap ${h}</option>`).join('');
+      } else {
+        options1 = heapListB1.map(h => `<option value="B1_${h}">Batch 1 - Heap ${h}</option>`).join('');
+        options2 = heapListB2.map(h => `<option value="B2_${h}">Batch 2 - Heap ${h}</option>`).join('');
+      }
+
+      h1Select.innerHTML = options1;
+      h2Select.innerHTML = options2;
+
+      if (mode === 'B2') {
+        if(heapListB2[0]) h1Select.value = `B2_${heapListB2[0]}`;
+        if(heapListB2[1]) h2Select.value = `B2_${heapListB2[1]}`;
+      } else if (mode === 'B1') {
+        if(heapListB1[0]) h1Select.value = `B1_${heapListB1[0]}`;
+        if(heapListB1[1]) h2Select.value = `B1_${heapListB1[1]}`;
+      } else {
+        if(heapListB1[0]) h1Select.value = `B1_${heapListB1[0]}`;
+        if(heapListB2[0]) h2Select.value = `B2_${heapListB2[0]}`;
+      }
+    }
+
+    function initCharts() {
+      const ctxMain = document.getElementById('mainHeapChart').getContext('2d');
+      mainChart = new Chart(ctxMain, {
+        type: 'line',
+        data: { labels: [], datasets: [] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+
+      const ctxComp = document.getElementById('tempComparisonChart').getContext('2d');
+      tempCompChart = new Chart(ctxComp, {
+        type: 'line',
+        data: { labels: [], datasets: [] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+          }
+        }
+      });
+    }
+
+    function setupEventListeners() {
+      document.getElementById('selectMainHeap').addEventListener('change', () => {
+        updateMainChart();
+        renderSelectedChart();
+      });
+      document.getElementById('selectDisplayMode').addEventListener('change', updateMainChart);
+      document.getElementById('selectCompBatch').addEventListener('change', () => {
+        updateCompHeapDropdowns();
+        updateTempCompChart();
+      });
+      document.getElementById('selectCompHeap1').addEventListener('change', updateTempCompChart);
+      document.getElementById('selectCompHeap2').addEventListener('change', updateTempCompChart);
+    }
+
+    function updateMainChart() {
+      const rawVal = document.getElementById('selectMainHeap').value;
+      if (!rawVal) return;
+      const [batchKey, heap] = rawVal.split('_');
+      const mode = document.getElementById('selectDisplayMode').value;
+      const datasetStore = batchKey === 'B2' ? batch2Data : batch1Data;
+
+      const mData = datasetStore.morning.filter(d => d.heap === heap);
+      const aData = datasetStore.afternoon.filter(d => d.heap === heap);
+
+      const days = Array.from(new Set([...mData.map(d => d.day), ...aData.map(d => d.day)])).sort((a,b)=>a-b);
+      
+      let datasets = [];
+
+      if (mode === 'separate_temp') {
+        datasets = [
+          { label: 'Morning Temp (°C)', data: days.map(day => (mData.find(d => d.day === day) || {}).temp || null), borderColor: '#00a0fc', tension: 0.3 },
+          { label: 'Afternoon Temp (°C)', data: days.map(day => (aData.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 }
+        ];
+      } else if (mode === 'temp_moisture') {
+        datasets = [
+          { label: 'Temp (°C)', data: days.map(day => (mData.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 },
+          { label: 'Moisture (%)', data: days.map(day => (mData.find(d => d.day === day) || {}).moisture || null), borderColor: '#00a0fc', tension: 0.3 }
+        ];
+      } else {
+        datasets = [
+          { 
+            label: 'Avg Temperature (°C)', 
+            data: days.map(day => {
+              const m = mData.find(d => d.day === day);
+              const a = aData.find(d => d.day === day);
+              if (m && a) return (m.temp + a.temp) / 2;
+              return (m || a || {}).temp || null;
+            }), 
+            borderColor: '#3b82f6', 
+            tension: 0.3 
+          }
+        ];
+      }
+
+      mainChart.data.labels = days.map(d => `Day ${d}`);
+      mainChart.data.datasets = datasets;
+      mainChart.update();
+    }
+
+    function updateTempCompChart() {
+      const h1Val = document.getElementById('selectCompHeap1').value;
+      const h2Val = document.getElementById('selectCompHeap2').value;
+      if (!h1Val || !h2Val) return;
+
+      const [b1Key, h1] = h1Val.split('_');
+      const [b2Key, h2] = h2Val.split('_');
+
+      const data1 = (b1Key === 'B2' ? batch2Data : batch1Data).morning.filter(d => d.heap === h1);
+      const data2 = (b2Key === 'B2' ? batch2Data : batch1Data).morning.filter(d => d.heap === h2);
+
+      const days = Array.from(new Set([...data1.map(d => d.day), ...data2.map(d => d.day)])).sort((a,b)=>a-b);
+
+      tempCompChart.data.labels = days.map(d => `Day ${d}`);
+      tempCompChart.data.datasets = [
+        { label: `${b1Key} - Heap ${h1}`, data: days.map(day => (data1.find(d => d.day === day) || {}).temp || null), borderColor: '#3b82f6', tension: 0.3 },
+        { label: `${b2Key} - Heap ${h2}`, data: days.map(day => (data2.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 }
+      ];
+      tempCompChart.update();
+    }
+
+    /* ----------------------------------------------------
+       SECTION 3: DETAILED HEAP LOGIC (Script Reference 1)
+    ---------------------------------------------------- */
+    function renderSelectedChart() {
+      if (activeDetailedChart) {
+        activeDetailedChart.destroy();
+      }
+
+      const selectedMainHeap = document.getElementById('selectMainHeap').value || "B2_A";
+      const [batchKey, selectedHeapName] = selectedMainHeap.split('_');
+
+      document.getElementById('selectedHeapLabel').innerText = `Active Heap: ${batchKey} - ${selectedHeapName}`;
+
+      // Filter dataset by selected heap variable if available in raw sheet data
+      let filteredData = globalValidData.filter(r => {
+        if (r.Variable || r.Heap) {
+          const itemHeap = String(r.Variable || r.Heap).trim().toLowerCase();
+          return itemHeap === selectedHeapName.toLowerCase();
+        }
+        return true; // Fallback jika spreadsheet 2.1B tidak menggunakan filter kolom Heap
+      });
+
+      if (filteredData.length === 0) filteredData = globalValidData;
+
+      const selector = document.getElementById('chartSelector');
+      const selectedView = selector.value;
+      const titleElement = document.getElementById('chartTitle');
+      titleElement.innerText = selector.options[selector.selectedIndex].text;
+
+      const ctx = document.getElementById('detailedHeapChart').getContext('2d');
+
+      const daysGroup = {};
+      filteredData.forEach(r => {
+        const day = r.Days;
+        if (!daysGroup[day]) daysGroup[day] = { sum: 0, count: 0 };
+        daysGroup[day].sum += Number(r.Temp);
+        daysGroup[day].count += 1;
+      });
+
+      const uniqueDays = Object.keys(daysGroup).sort((a, b) => Number(a) - Number(b));
+
+      // Option 1: Daily Average Temperature
+      if (selectedView === '1') {
+        const avgTempPerDay = uniqueDays.map(d => (daysGroup[d].sum / daysGroup[d].count).toFixed(2));
+        activeDetailedChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: uniqueDays,
+            datasets: [{
+              label: 'Average Temperature (°C)',
+              data: avgTempPerDay,
+              borderColor: '#f59387',
+              backgroundColor: 'rgba(245, 147, 135, 0.2)',
+              fill: true,
+              tension: 0.3,
+              pointRadius: 4,
+              pointHoverRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { title: { display: true, text: 'Days' } },
+              y: { title: { display: true, text: 'Average Temp (°C)' } }
+            }
+          }
+        });
+      }
+
+      // Option 2: Average Temp & Moisture per Session (Morning & Afternoon)
+      else if (selectedView === '2') {
+        const sessionGroup = {};
+
+        filteredData.forEach(r => {
+          const day = r.Days;
+          const timeStr = String(r.Time).trim().toLowerCase();
+          let timeCat = null;
+          if (/morning|pagi/i.test(timeStr)) timeCat = 'Morning';
+          else if (/afternoon|sore/i.test(timeStr)) timeCat = 'Afternoon';
+
+          if (timeCat && day !== undefined && day !== null) {
+            const key = `${day}_${timeCat}`;
+            if (!sessionGroup[key]) {
+              sessionGroup[key] = { tempSum: 0, moistSum: 0, countTemp: 0, countMoist: 0 };
+            }
+            if (r.Temp !== null && r.Temp !== undefined) {
+              sessionGroup[key].tempSum += Number(r.Temp);
+              sessionGroup[key].countTemp += 1;
+            }
+            if (r.Moist !== null && r.Moist !== undefined) {
+              sessionGroup[key].moistSum += Number(r.Moist);
+              sessionGroup[key].countMoist += 1;
+            }
+          }
         });
 
-        function getGvizUrl(spreadsheetId, sheetName) {
-            return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-        }
+        const chronologicalLabels = [];
+        const avgTempData = [];
+        const avgMoistData = [];
 
-        async function fetchSpreadsheetData() {
-            const statusEl = document.getElementById('syncStatus');
-            try {
-                statusEl.innerHTML = `<span class="status-dot" style="background-color:#f59e0b;"></span> Syncing Google Sheets...`;
+        uniqueDays.forEach(day => {
+          ['Morning', 'Afternoon'].forEach(timeCat => {
+            const key = `${day}_${timeCat}`;
+            if (sessionGroup[key]) {
+              chronologicalLabels.push(`${day} (${timeCat})`);
+              
+              const avgTemp = sessionGroup[key].countTemp > 0 
+                ? (sessionGroup[key].tempSum / sessionGroup[key].countTemp).toFixed(2) 
+                : null;
+              const avgMoist = sessionGroup[key].countMoist > 0 
+                ? (sessionGroup[key].moistSum / sessionGroup[key].countMoist).toFixed(2) 
+                : null;
 
-                const [b1M, b1A, b2M, b2A] = await Promise.all([
-                    fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_MORNING)),
-                    fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_AFTERNOON)),
-                    fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_MORNING)),
-                    fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_AFTERNOON))
-                ]);
-
-                batch1Data.morning = processSheetRows(b1M);
-                batch1Data.afternoon = processSheetRows(b1A);
-                batch2Data.morning = processSheetRows(b2M);
-                batch2Data.afternoon = processSheetRows(b2A);
-
-                heapListB1 = Array.from(new Set(batch1Data.morning.map(d => d.heap))).filter(Boolean).sort();
-                heapListB2 = Array.from(new Set(batch2Data.morning.map(d => d.heap))).filter(Boolean).sort();
-
-                initDropdowns();
-                updateMainChart();
-                updateTempCompChart();
-                renderTable();
-
-                statusEl.innerHTML = `<span class="status-dot"></span> Live Google Sheets Connected`;
-            } catch (err) {
-                console.error("Error fetching Google Sheets data:", err);
-                statusEl.innerHTML = `<span class="status-dot" style="background-color:#ef4444;"></span> Sync Failed`;
+              avgTempData.push(avgTemp);
+              avgMoistData.push(avgMoist);
             }
-        }
+          });
+        });
 
-        function fetchCSV(url) {
-            return new Promise((resolve, reject) => {
-                Papa.parse(url, {
-                    download: true,
-                    header: true,
-                    dynamicTyping: true,
-                    skipEmptyLines: true,
-                    complete: results => resolve(results.data),
-                    error: err => reject(err)
-                });
-            });
-        }
-
-        function processSheetRows(rows) {
-            if (!rows || !Array.isArray(rows) || rows.length === 0) return [];
-
-            const parseNum = (val) => {
-                if (val === undefined || val === null || val === '') return 0;
-                let strVal = String(val).replace(',', '.').trim();
-                let num = parseFloat(strVal);
-                return isNaN(num) ? 0 : num;
-            };
-
-            const rawMapped = rows.map(r => {
-                const heapVal = r['Variable'] !== undefined ? String(r['Variable']).trim() : '';
-                const dayVal = r['Days'] !== undefined ? parseNum(r['Days']) : parseNum(r['Day']);
-
-                return {
-                    heap: heapVal,
-                    day: dayVal,
-                    temp: parseNum(r['Temp']),
-                    moisture: parseNum(r['Moist']),
-                    ec: parseNum(r['EC']),
-                    ph: parseNum(r['pH']),
-                    n: parseNum(r['N']),
-                    p: parseNum(r['P']),
-                    k: parseNum(r['K']),
-                    fertility: parseNum(r['Fertility'])
-                };
-            }).filter(d => d.heap !== "" && d.heap !== "undefined");
-
-            const aggregated = {};
-            rawMapped.forEach(item => {
-                const key = `${item.heap}_${item.day}`;
-                if (!aggregated[key]) {
-                    aggregated[key] = { ...item, count: 1 };
-                } else {
-                    aggregated[key].temp += item.temp;
-                    aggregated[key].moisture += item.moisture;
-                    aggregated[key].ec += item.ec;
-                    aggregated[key].ph += item.ph;
-                    aggregated[key].n += item.n;
-                    aggregated[key].p += item.p;
-                    aggregated[key].k += item.k;
-                    aggregated[key].fertility += item.fertility;
-                    aggregated[key].count += 1;
-                }
-            });
-
-            return Object.values(aggregated).map(item => ({
-                ...item,
-                temp: +(item.temp / item.count).toFixed(1),
-                moisture: +(item.moisture / item.count).toFixed(1),
-                ec: Math.round(item.ec / item.count),
-                ph: +(item.ph / item.count).toFixed(1),
-                n: Math.round(item.n / item.count),
-                p: Math.round(item.p / item.count),
-                k: Math.round(item.k / item.count),
-                fertility: Math.round(item.fertility / item.count)
-            })).sort((a, b) => a.day - b.day);
-        }
-
-        function initDropdowns() {
-            const mainHeapSelect = document.getElementById('selectMainHeap');
-            mainHeapSelect.innerHTML = [
-                ...heapListB2.map(h => `<option value="B2_${h}">Batch 2 - Heap ${h}</option>`),
-                ...heapListB1.map(h => `<option value="B1_${h}">Batch 1 - Heap ${h}</option>`)
-            ].join('');
-
-            updateCompHeapDropdowns();
-        }
-
-        function updateCompHeapDropdowns() {
-            const mode = document.getElementById('selectCompBatch').value;
-            const h1Select = document.getElementById('selectCompHeap1');
-            const h2Select = document.getElementById('selectCompHeap2');
-
-            let options1 = '', options2 = '';
-
-            if (mode === 'B2') {
-                options1 = heapListB2.map(h => `<option value="B2_${h}">Batch 2 - Heap ${h}</option>`).join('');
-                options2 = heapListB2.map(h => `<option value="B2_${h}">Batch 2 - Heap ${h}</option>`).join('');
-            } else if (mode === 'B1') {
-                options1 = heapListB1.map(h => `<option value="B1_${h}">Batch 1 - Heap ${h}</option>`).join('');
-                options2 = heapListB1.map(h => `<option value="B1_${h}">Batch 1 - Heap ${h}</option>`).join('');
-            } else {
-                options1 = heapListB1.map(h => `<option value="B1_${h}">Batch 1 - Heap ${h}</option>`).join('');
-                options2 = heapListB2.map(h => `<option value="B2_${h}">Batch 2 - Heap ${h}</option>`).join('');
+        activeDetailedChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: chronologicalLabels,
+            datasets: [
+              {
+                label: 'Average Temp (°C)',
+                data: avgTempData,
+                borderColor: '#f87171',
+                backgroundColor: 'rgba(248, 113, 113, 0.2)',
+                yAxisID: 'y',
+                tension: 0.3,
+                spanGaps: true,
+                pointRadius: 4
+              },
+              {
+                label: 'Average Moisture (%)',
+                data: avgMoistData,
+                borderColor: '#38bdf8',
+                backgroundColor: 'rgba(56, 189, 248, 0.2)',
+                yAxisID: 'y1',
+                tension: 0.3,
+                spanGaps: true,
+                pointRadius: 4
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { title: { display: true, text: 'Chronological Session (Day & Morning/Afternoon)' } },
+              y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: { display: true, text: 'Average Temp (°C)' }
+              },
+              y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                grid: { drawOnChartArea: false },
+                title: { display: true, text: 'Average Moisture (%)' }
+              }
             }
+          }
+        });
+      }
 
-            h1Select.innerHTML = options1;
-            h2Select.innerHTML = options2;
+      // Option 3: Temperature Comparison per Sampling Point (A, B, C) & Position
+      else if (selectedView === '3') {
+        const spPosDataMap = {};
 
-            if (mode === 'B2') {
-                if(heapListB2[0]) h1Select.value = `B2_${heapListB2[0]}`;
-                if(heapListB2[1]) h2Select.value = `B2_${heapListB2[1]}`;
-            } else if (mode === 'B1') {
-                if(heapListB1[0]) h1Select.value = `B1_${heapListB1[0]}`;
-                if(heapListB1[1]) h2Select.value = `B1_${heapListB1[1]}`;
-            } else {
-                if(heapListB1[0]) h1Select.value = `B1_${heapListB1[0]}`;
-                if(heapListB2[0]) h2Select.value = `B2_${heapListB2[0]}`;
-            }
-        }
+        filteredData.forEach(r => {
+          if (!r.SP || !r.Position) return;
 
-        function initCharts() {
-            const ctxMain = document.getElementById('mainHeapChart').getContext('2d');
-            mainChart = new Chart(ctxMain, {
-                type: 'line',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
-                    }
-                }
-            });
+          const sp = String(r.SP).trim().toUpperCase();
+          const rawPos = String(r.Position).trim().toLowerCase();
+          let pos = null;
+          if (/top|atas/i.test(rawPos)) pos = 'Top';
+          else if (/mid|middle|tengah/i.test(rawPos)) pos = 'Middle';
+          else if (/bot|bottom|bawah|btm/i.test(rawPos)) pos = 'Bottom';
 
-            const ctxComp = document.getElementById('tempComparisonChart').getContext('2d');
-            tempCompChart = new Chart(ctxComp, {
-                type: 'line',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
-                    }
-                }
-            });
-        }
-
-        function setupEventListeners() {
-            document.getElementById('selectMainHeap').addEventListener('change', updateMainChart);
-            document.getElementById('selectDisplayMode').addEventListener('change', updateMainChart);
-            document.getElementById('selectCompBatch').addEventListener('change', () => {
-                updateCompHeapDropdowns();
-                updateTempCompChart();
-            });
-            document.getElementById('selectCompHeap1').addEventListener('change', updateTempCompChart);
-            document.getElementById('selectCompHeap2').addEventListener('change', updateTempCompChart);
-            document.getElementById('tableSearch').addEventListener('input', renderTable);
-        }
-
-        function updateMainChart() {
-            const rawVal = document.getElementById('selectMainHeap').value;
-            if (!rawVal) return;
-            const [batchKey, heap] = rawVal.split('_');
-            const mode = document.getElementById('selectDisplayMode').value;
-            const datasetStore = batchKey === 'B2' ? batch2Data : batch1Data;
-
-            const mData = datasetStore.morning.filter(d => d.heap === heap);
-            const aData = datasetStore.afternoon.filter(d => d.heap === heap);
-
-            const days = Array.from(new Set([...mData.map(d => d.day), ...aData.map(d => d.day)])).sort((a,b)=>a-b);
+          if (sp && pos && r.Days !== undefined && r.Days !== null) {
+            const key = `${sp}-${pos}`;
+            if (!spPosDataMap[key]) spPosDataMap[key] = {};
+            if (!spPosDataMap[key][r.Days]) spPosDataMap[key][r.Days] = { sum: 0, count: 0 };
             
-            let datasets = [];
+            spPosDataMap[key][r.Days].sum += Number(r.Temp);
+            spPosDataMap[key][r.Days].count += 1;
+          }
+        });
 
-            if (mode === 'separate_temp') {
-                datasets = [
-                    { label: 'Morning Temp (°C)', data: days.map(day => (mData.find(d => d.day === day) || {}).temp || null), borderColor: '#00a0fc', tension: 0.3 },
-                    { label: 'Afternoon Temp (°C)', data: days.map(day => (aData.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 }
-                ];
-            } else if (mode === 'temp_moisture') {
-                datasets = [
-                    { label: 'Temp (°C)', data: days.map(day => (mData.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 },
-                    { label: 'Moisture (%)', data: days.map(day => (mData.find(d => d.day === day) || {}).moisture || null), borderColor: '#00a0fc', tension: 0.3 }
-                ];
-            } else {
-                datasets = [
-                    { 
-                        label: 'Avg Temperature (°C)', 
-                        data: days.map(day => {
-                            const m = mData.find(d => d.day === day);
-                            const a = aData.find(d => d.day === day);
-                            if (m && a) return (m.temp + a.temp) / 2;
-                            return (m || a || {}).temp || null;
-                        }), 
-                        borderColor: '#3b82f6', 
-                        tension: 0.3 
-                    }
-                ];
+        const targetOrder = [
+          { key: 'A-Top', label: 'A-Top', color: '#ef4444' },
+          { key: 'A-Middle', label: 'A-Middle', color: '#f97316' },
+          { key: 'A-Bottom', label: 'A-Bottom', color: '#eab308' },
+          { key: 'B-Top', label: 'B-Top', color: '#22c55e' },
+          { key: 'B-Middle', label: 'B-Middle', color: '#06b6d4' },
+          { key: 'B-Bottom', label: 'B-Bottom', color: '#3b82f6' },
+          { key: 'C-Top', label: 'C-Top', color: '#8b5cf6' },
+          { key: 'C-Middle', label: 'C-Middle', color: '#d946ef' },
+          { key: 'C-Bottom', label: 'C-Bottom', color: '#f43f5e' }
+        ];
+
+        const datasets = targetOrder.map(item => {
+          const dayMap = spPosDataMap[item.key] || {};
+          const dataSeries = uniqueDays.map(d => dayMap[d] ? (dayMap[d].sum / dayMap[d].count).toFixed(2) : null);
+
+          return {
+            label: item.label,
+            data: dataSeries,
+            borderColor: item.color,
+            backgroundColor: item.color,
+            tension: 0.2,
+            fill: false,
+            spanGaps: true,
+            pointRadius: 3
+          };
+        });
+
+        activeDetailedChart = new Chart(ctx, {
+          type: 'line',
+          data: { labels: uniqueDays, datasets: datasets },
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'top', labels: { boxWidth: 15, padding: 15 } }
+            },
+            scales: {
+              x: { title: { display: true, text: 'Days' } },
+              y: { title: { display: true, text: 'Average Temp (°C)' } }
             }
+          }
+        });
+      }
 
-            mainChart.data.labels = days.map(d => `Day ${d}`);
-            mainChart.data.datasets = datasets;
-            mainChart.update();
-        }
+      // Option 4: Position Comparison: Top (Red), Middle (Yellow), Bottom (Green)
+      else if (selectedView === '4') {
+        const posGroup = { Top: {}, Middle: {}, Bottom: {} };
 
-        function updateTempCompChart() {
-            const h1Val = document.getElementById('selectCompHeap1').value;
-            const h2Val = document.getElementById('selectCompHeap2').value;
-            if (!h1Val || !h2Val) return;
+        filteredData.forEach(r => {
+          if (!r.Position) return;
+          const pos = String(r.Position).trim().toLowerCase();
+          let posCategory = null;
 
-            const [b1Key, h1] = h1Val.split('_');
-            const [b2Key, h2] = h2Val.split('_');
+          if (/top|atas/i.test(pos)) posCategory = 'Top';
+          else if (/mid|middle|tengah/i.test(pos)) posCategory = 'Middle';
+          else if (/bot|bottom|bawah|btm/i.test(pos)) posCategory = 'Bottom';
 
-            const data1 = (b1Key === 'B2' ? batch2Data : batch1Data).morning.filter(d => d.heap === h1);
-            const data2 = (b2Key === 'B2' ? batch2Data : batch1Data).morning.filter(d => d.heap === h2);
+          if (posCategory && r.Days !== undefined && r.Days !== null) {
+            if (!posGroup[posCategory][r.Days]) posGroup[posCategory][r.Days] = { sum: 0, count: 0 };
+            posGroup[posCategory][r.Days].sum += Number(r.Temp);
+            posGroup[posCategory][r.Days].count += 1;
+          }
+        });
 
-            const days = Array.from(new Set([...data1.map(d => d.day), ...data2.map(d => d.day)])).sort((a,b)=>a-b);
+        const getPosData = (posName) => uniqueDays.map(d => posGroup[posName][d] ? (posGroup[posName][d].sum / posGroup[posName][d].count).toFixed(2) : null);
 
-            tempCompChart.data.labels = days.map(d => `Day ${d}`);
-            tempCompChart.data.datasets = [
-                { label: `${b1Key} - Heap ${h1}`, data: days.map(day => (data1.find(d => d.day === day) || {}).temp || null), borderColor: '#3b82f6', tension: 0.3 },
-                { label: `${b2Key} - Heap ${h2}`, data: days.map(day => (data2.find(d => d.day === day) || {}).temp || null), borderColor: '#ff0099', tension: 0.3 }
-            ];
-            tempCompChart.update();
-        }
+        activeDetailedChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: uniqueDays,
+            datasets: [
+              { label: 'Top', data: getPosData('Top'), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.3, spanGaps: true },
+              { label: 'Middle', data: getPosData('Middle'), borderColor: '#eab308', backgroundColor: '#eab308', tension: 0.3, spanGaps: true },
+              { label: 'Bottom', data: getPosData('Bottom'), borderColor: '#22c55e', backgroundColor: '#22c55e', tension: 0.3, spanGaps: true }
+            ]
+          },
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: {
+              x: { title: { display: true, text: 'Days' } },
+              y: { title: { display: true, text: 'Average Temp (°C)' } }
+            }
+          }
+        });
+      }
 
-        function renderTable() {
-            const search = document.getElementById('tableSearch').value.toLowerCase();
-            const body = document.getElementById('tableBody');
-            
-            const combineRows = (batchName, list) => list.map(d => ({ ...d, batch: batchName }));
-            const allData = [
-                ...combineRows('Batch 2', batch2Data.morning),
-                ...combineRows('Batch 1', batch1Data.morning)
-            ].filter(d => String(d.heap).toLowerCase().includes(search));
+      // Option 5: Morning vs Afternoon Average Temperature Comparison
+      else if (selectedView === '5') {
+        const timeGroup = {};
 
-            body.innerHTML = allData.slice(0, 50).map(d => `
-                <tr>
-                    <td>${d.batch}</td>
-                    <td><b>${d.heap}</b></td>
-                    <td>${d.day}</td>
-                    <td>${d.temp}°C</td>
-                    <td>${d.moisture}%</td>
-                    <td>${d.ec}</td>
-                    <td>${d.ph}</td>
-                    <td>${d.n}</td>
-                    <td>${d.p}</td>
-                    <td>${d.k}</td>
-                    <td>${d.fertility}</td>
-                </tr>
-            `).join('');
-        }
-    </script>
+        filteredData.forEach(r => {
+          const day = r.Days;
+          const time = String(r.Time).trim();
+          let timeCategory = null;
+          if (/morning/i.test(time)) timeCategory = 'Morning';
+          else if (/afternoon/i.test(time)) timeCategory = 'Afternoon';
+
+          if (timeCategory && day !== undefined && day !== null) {
+            const key = `${day}_${timeCategory}`;
+            if (!timeGroup[key]) timeGroup[key] = { day: day, time: timeCategory, sum: 0, count: 0 };
+            timeGroup[key].sum += Number(r.Temp);
+            timeGroup[key].count += 1;
+          }
+        });
+
+        const chronologicalLabels = [];
+        const continuousData = [];
+        const timeTypes = [];
+
+        uniqueDays.forEach(day => {
+          ['Morning', 'Afternoon'].forEach(t => {
+            const key = `${day}_${t}`;
+            if (timeGroup[key]) {
+              chronologicalLabels.push(`${day} (${t})`);
+              continuousData.push((timeGroup[key].sum / timeGroup[key].count).toFixed(2));
+              timeTypes.push(t);
+            }
+          });
+        });
+
+        activeDetailedChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: chronologicalLabels,
+            datasets: [
+              {
+                label: 'Continuous Average Temp (°C)',
+                data: continuousData,
+                tension: 0.3,
+                fill: false,
+                pointBackgroundColor: ctx => timeTypes[ctx.dataIndex] === 'Morning' ? '#38bdf8' : '#f97316',
+                pointBorderColor: ctx => timeTypes[ctx.dataIndex] === 'Morning' ? '#38bdf8' : '#f97316',
+                pointRadius: 5,
+                segment: {
+                  borderColor: ctx => timeTypes[ctx.p1DataIndex] === 'Morning' ? '#38bdf8' : '#f97316'
+                }
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const type = timeTypes[context.dataIndex];
+                    return ` Temp (${type}): ${context.raw} °C`;
+                  }
+                }
+              }
+            },
+            scales: {
+              y: { title: { display: true, text: 'Temperature (°C)' } },
+              x: { title: { display: true, text: 'Chronological Day & Time (Morning - Afternoon)' } }
+            }
+          }
+        });
+      }
+    }
+  </script>
 </body>
 </html>
