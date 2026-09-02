@@ -137,14 +137,14 @@
       </div>
     </div>
 
-    <!-- SECTION 3: Detailed Heap (Replaces Old Detailed Monitoring Table) -->
+    <!-- SECTION 3: Detailed Heap Dynamic Analysis -->
     <div class="card">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-slate-700/60 pb-4">
         <div>
           <h2 class="text-xl font-bold text-blue-400 flex items-center gap-2">
             Detailed Heap <span id="selectedHeapLabel" class="text-sm px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded-full font-normal">Active Heap: -</span>
           </h2>
-          <p class="text-xs text-slate-400 mt-1">Temperature & Moisture Dynamic Analysis (Variable 2.1B Reference)</p>
+          <p class="text-xs text-slate-400 mt-1">Temperature & Moisture Dynamic Analysis</p>
         </div>
         <div class="flex items-center gap-3 w-full md:w-auto">
           <label for="chartSelector" class="text-sm font-semibold text-blue-300 whitespace-nowrap">Select Analysis View:</label>
@@ -172,24 +172,21 @@
   </div>
 
   <script>
-    // Spreadsheets References
+    // Unified Google Spreadsheets Data Source
     const BATCH2_ID = "1GkNivoXgBinhB6y-hM_JxfhNy-Kt2DE0KG6EStcvTe0";
     const BATCH1_ID = "1UwUsN1I9M9aeGZziCxLqRcloGOWkuYva_vklwbNZXyQ";
-    const DETAILED_SHEET_ID = "149BvvoHpkQ-53Zkhx1OFtLTpesTnj1FjF98-HrxGnZE";
 
     const BATCH1_SHEET_MORNING = "Batch 1 Morning";
     const BATCH1_SHEET_AFTERNOON = "Batch 1 Afternoon";
     const BATCH2_SHEET_MORNING = "Batch 2 Morning";
     const BATCH2_SHEET_AFTERNOON = "Batch 2 Afternoon";
 
-    let batch2Data = { morning: [], afternoon: [] };
-    let batch1Data = { morning: [], afternoon: [] };
+    let batch2Data = { morning: [], afternoon: [], rawMorning: [], rawAfternoon: [] };
+    let batch1Data = { morning: [], afternoon: [], rawMorning: [], rawAfternoon: [] };
     let heapListB2 = [];
     let heapListB1 = [];
 
-    let globalValidData = [];
     let activeDetailedChart = null;
-
     let mainChart, tempCompChart;
 
     window.addEventListener('DOMContentLoaded', async () => {
@@ -199,10 +196,7 @@
     });
 
     function getGvizUrl(spreadsheetId, sheetName) {
-      if (sheetName) {
-        return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-      }
-      return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
+      return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
     }
 
     async function fetchAllData() {
@@ -210,23 +204,25 @@
       try {
         statusEl.innerHTML = `<span class="status-dot" style="background-color:#f59e0b;"></span> Syncing Data...`;
 
-        const [b1M, b1A, b2M, b2A, detailedRaw] = await Promise.all([
+        const [b1M, b1A, b2M, b2A] = await Promise.all([
           fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_MORNING)),
           fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_AFTERNOON)),
           fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_MORNING)),
-          fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_AFTERNOON)),
-          fetchCSV(getGvizUrl(DETAILED_SHEET_ID))
+          fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_AFTERNOON))
         ]);
 
-        batch1Data.morning = processSheetRows(b1M);
-        batch1Data.afternoon = processSheetRows(b1A);
-        batch2Data.morning = processSheetRows(b2M);
-        batch2Data.afternoon = processSheetRows(b2A);
+        batch1Data.rawMorning = parseRawRows(b1M);
+        batch1Data.rawAfternoon = parseRawRows(b1A);
+        batch2Data.rawMorning = parseRawRows(b2M);
+        batch2Data.rawAfternoon = parseRawRows(b2A);
+
+        batch1Data.morning = aggregateSheetRows(batch1Data.rawMorning);
+        batch1Data.afternoon = aggregateSheetRows(batch1Data.rawAfternoon);
+        batch2Data.morning = aggregateSheetRows(batch2Data.rawMorning);
+        batch2Data.afternoon = aggregateSheetRows(batch2Data.rawAfternoon);
 
         heapListB1 = Array.from(new Set(batch1Data.morning.map(d => d.heap))).filter(Boolean).sort();
         heapListB2 = Array.from(new Set(batch2Data.morning.map(d => d.heap))).filter(Boolean).sort();
-
-        globalValidData = detailedRaw.filter(r => r.Days !== undefined && r.Days !== null && r.Temp !== undefined && r.Temp !== null);
 
         Chart.defaults.color = '#94a3b8';
         Chart.defaults.borderColor = '#334155';
@@ -255,34 +251,30 @@
       });
     }
 
-    function processSheetRows(rows) {
+    function parseNum(val) {
+      if (val === undefined || val === null || val === '') return 0;
+      let strVal = String(val).replace(',', '.').trim();
+      let num = parseFloat(strVal);
+      return isNaN(num) ? 0 : num;
+    }
+
+    function parseRawRows(rows) {
       if (!rows || !Array.isArray(rows) || rows.length === 0) return [];
-
-      const parseNum = (val) => {
-        if (val === undefined || val === null || val === '') return 0;
-        let strVal = String(val).replace(',', '.').trim();
-        let num = parseFloat(strVal);
-        return isNaN(num) ? 0 : num;
-      };
-
-      const rawMapped = rows.map(r => {
+      return rows.map(r => {
         const heapVal = r['Variable'] !== undefined ? String(r['Variable']).trim() : '';
         const dayVal = r['Days'] !== undefined ? parseNum(r['Days']) : parseNum(r['Day']);
-
         return {
           heap: heapVal,
           day: dayVal,
+          sp: r['SP'] ? String(r['SP']).trim() : '',
+          position: r['Position'] ? String(r['Position']).trim() : '',
           temp: parseNum(r['Temp']),
-          moisture: parseNum(r['Moist']),
-          ec: parseNum(r['EC']),
-          ph: parseNum(r['pH']),
-          n: parseNum(r['N']),
-          p: parseNum(r['P']),
-          k: parseNum(r['K']),
-          fertility: parseNum(r['Fertility'])
+          moisture: parseNum(r['Moist'])
         };
       }).filter(d => d.heap !== "" && d.heap !== "undefined");
+    }
 
+    function aggregateSheetRows(rawMapped) {
       const aggregated = {};
       rawMapped.forEach(item => {
         const key = `${item.heap}_${item.day}`;
@@ -291,12 +283,6 @@
         } else {
           aggregated[key].temp += item.temp;
           aggregated[key].moisture += item.moisture;
-          aggregated[key].ec += item.ec;
-          aggregated[key].ph += item.ph;
-          aggregated[key].n += item.n;
-          aggregated[key].p += item.p;
-          aggregated[key].k += item.k;
-          aggregated[key].fertility += item.fertility;
           aggregated[key].count += 1;
         }
       });
@@ -462,7 +448,7 @@
     }
 
     /* ----------------------------------------------------
-       SECTION 3: DETAILED HEAP LOGIC (Script Reference 1)
+       SECTION 3: DETAILED HEAP LOGIC (SAME DATA SOURCE AS TOP)
     ---------------------------------------------------- */
     function renderSelectedChart() {
       if (activeDetailedChart) {
@@ -472,18 +458,16 @@
       const selectedMainHeap = document.getElementById('selectMainHeap').value || "B2_A";
       const [batchKey, selectedHeapName] = selectedMainHeap.split('_');
 
-      document.getElementById('selectedHeapLabel').innerText = `Active Heap: ${batchKey} - ${selectedHeapName}`;
+      document.getElementById('selectedHeapLabel').innerText = `Active Heap: ${batchKey} - Heap ${selectedHeapName}`;
 
-      // Filter dataset by selected heap variable if available in raw sheet data
-      let filteredData = globalValidData.filter(r => {
-        if (r.Variable || r.Heap) {
-          const itemHeap = String(r.Variable || r.Heap).trim().toLowerCase();
-          return itemHeap === selectedHeapName.toLowerCase();
-        }
-        return true; // Fallback jika spreadsheet 2.1B tidak menggunakan filter kolom Heap
-      });
+      const datasetStore = batchKey === 'B2' ? batch2Data : batch1Data;
 
-      if (filteredData.length === 0) filteredData = globalValidData;
+      // Filter Data berdasarkan Heap yang dipilih di bagian paling atas
+      const rawM = datasetStore.rawMorning.filter(d => d.heap === selectedHeapName);
+      const rawA = datasetStore.rawAfternoon.filter(d => d.heap === selectedHeapName);
+
+      const aggM = datasetStore.morning.filter(d => d.heap === selectedHeapName);
+      const aggA = datasetStore.afternoon.filter(d => d.heap === selectedHeapName);
 
       const selector = document.getElementById('chartSelector');
       const selectedView = selector.value;
@@ -491,24 +475,21 @@
       titleElement.innerText = selector.options[selector.selectedIndex].text;
 
       const ctx = document.getElementById('detailedHeapChart').getContext('2d');
-
-      const daysGroup = {};
-      filteredData.forEach(r => {
-        const day = r.Days;
-        if (!daysGroup[day]) daysGroup[day] = { sum: 0, count: 0 };
-        daysGroup[day].sum += Number(r.Temp);
-        daysGroup[day].count += 1;
-      });
-
-      const uniqueDays = Object.keys(daysGroup).sort((a, b) => Number(a) - Number(b));
+      const uniqueDays = Array.from(new Set([...aggM.map(d => d.day), ...aggA.map(d => d.day)])).sort((a, b) => a - b);
 
       // Option 1: Daily Average Temperature
       if (selectedView === '1') {
-        const avgTempPerDay = uniqueDays.map(d => (daysGroup[d].sum / daysGroup[d].count).toFixed(2));
+        const avgTempPerDay = uniqueDays.map(day => {
+          const m = aggM.find(d => d.day === day);
+          const a = aggA.find(d => d.day === day);
+          if (m && a) return ((m.temp + a.temp) / 2).toFixed(2);
+          return (m || a || {}).temp || null;
+        });
+
         activeDetailedChart = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: uniqueDays,
+            labels: uniqueDays.map(d => `Day ${d}`),
             datasets: [{
               label: 'Average Temperature (°C)',
               data: avgTempPerDay,
@@ -533,52 +514,24 @@
 
       // Option 2: Average Temp & Moisture per Session (Morning & Afternoon)
       else if (selectedView === '2') {
-        const sessionGroup = {};
-
-        filteredData.forEach(r => {
-          const day = r.Days;
-          const timeStr = String(r.Time).trim().toLowerCase();
-          let timeCat = null;
-          if (/morning|pagi/i.test(timeStr)) timeCat = 'Morning';
-          else if (/afternoon|sore/i.test(timeStr)) timeCat = 'Afternoon';
-
-          if (timeCat && day !== undefined && day !== null) {
-            const key = `${day}_${timeCat}`;
-            if (!sessionGroup[key]) {
-              sessionGroup[key] = { tempSum: 0, moistSum: 0, countTemp: 0, countMoist: 0 };
-            }
-            if (r.Temp !== null && r.Temp !== undefined) {
-              sessionGroup[key].tempSum += Number(r.Temp);
-              sessionGroup[key].countTemp += 1;
-            }
-            if (r.Moist !== null && r.Moist !== undefined) {
-              sessionGroup[key].moistSum += Number(r.Moist);
-              sessionGroup[key].countMoist += 1;
-            }
-          }
-        });
-
         const chronologicalLabels = [];
         const avgTempData = [];
         const avgMoistData = [];
 
         uniqueDays.forEach(day => {
-          ['Morning', 'Afternoon'].forEach(timeCat => {
-            const key = `${day}_${timeCat}`;
-            if (sessionGroup[key]) {
-              chronologicalLabels.push(`${day} (${timeCat})`);
-              
-              const avgTemp = sessionGroup[key].countTemp > 0 
-                ? (sessionGroup[key].tempSum / sessionGroup[key].countTemp).toFixed(2) 
-                : null;
-              const avgMoist = sessionGroup[key].countMoist > 0 
-                ? (sessionGroup[key].moistSum / sessionGroup[key].countMoist).toFixed(2) 
-                : null;
+          const m = aggM.find(d => d.day === day);
+          const a = aggA.find(d => d.day === day);
 
-              avgTempData.push(avgTemp);
-              avgMoistData.push(avgMoist);
-            }
-          });
+          if (m) {
+            chronologicalLabels.push(`Day ${day} (Morning)`);
+            avgTempData.push(m.temp);
+            avgMoistData.push(m.moisture);
+          }
+          if (a) {
+            chronologicalLabels.push(`Day ${day} (Afternoon)`);
+            avgTempData.push(a.temp);
+            avgMoistData.push(a.moisture);
+          }
         });
 
         activeDetailedChart = new Chart(ctx, {
@@ -612,7 +565,7 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-              x: { title: { display: true, text: 'Chronological Session (Day & Morning/Afternoon)' } },
+              x: { title: { display: true, text: 'Chronological Session' } },
               y: {
                 type: 'linear',
                 display: true,
@@ -633,26 +586,23 @@
 
       // Option 3: Temperature Comparison per Sampling Point (A, B, C) & Position
       else if (selectedView === '3') {
-        const spPosDataMap = {};
+        const allRaw = [...rawM, ...rawA];
+        const spPosMap = {};
 
-        filteredData.forEach(r => {
-          if (!r.SP || !r.Position) return;
+        allRaw.forEach(r => {
+          if (!r.sp || !r.position) return;
+          const sp = r.sp.toUpperCase();
+          let pos = r.position;
+          if (/top/i.test(pos)) pos = 'Top';
+          else if (/mid/i.test(pos)) pos = 'Middle';
+          else if (/bot/i.test(pos)) pos = 'Bottom';
 
-          const sp = String(r.SP).trim().toUpperCase();
-          const rawPos = String(r.Position).trim().toLowerCase();
-          let pos = null;
-          if (/top|atas/i.test(rawPos)) pos = 'Top';
-          else if (/mid|middle|tengah/i.test(rawPos)) pos = 'Middle';
-          else if (/bot|bottom|bawah|btm/i.test(rawPos)) pos = 'Bottom';
+          const key = `${sp}-${pos}`;
+          if (!spPosMap[key]) spPosMap[key] = {};
+          if (!spPosMap[key][r.day]) spPosMap[key][r.day] = { sum: 0, count: 0 };
 
-          if (sp && pos && r.Days !== undefined && r.Days !== null) {
-            const key = `${sp}-${pos}`;
-            if (!spPosDataMap[key]) spPosDataMap[key] = {};
-            if (!spPosDataMap[key][r.Days]) spPosDataMap[key][r.Days] = { sum: 0, count: 0 };
-            
-            spPosDataMap[key][r.Days].sum += Number(r.Temp);
-            spPosDataMap[key][r.Days].count += 1;
-          }
+          spPosMap[key][r.day].sum += r.temp;
+          spPosMap[key][r.day].count += 1;
         });
 
         const targetOrder = [
@@ -668,9 +618,8 @@
         ];
 
         const datasets = targetOrder.map(item => {
-          const dayMap = spPosDataMap[item.key] || {};
+          const dayMap = spPosMap[item.key] || {};
           const dataSeries = uniqueDays.map(d => dayMap[d] ? (dayMap[d].sum / dayMap[d].count).toFixed(2) : null);
-
           return {
             label: item.label,
             data: dataSeries,
@@ -685,13 +634,11 @@
 
         activeDetailedChart = new Chart(ctx, {
           type: 'line',
-          data: { labels: uniqueDays, datasets: datasets },
-          options: { 
-            responsive: true, 
+          data: { labels: uniqueDays.map(d => `Day ${d}`), datasets: datasets },
+          options: {
+            responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-              legend: { position: 'top', labels: { boxWidth: 15, padding: 15 } }
-            },
+            plugins: { legend: { position: 'top', labels: { boxWidth: 15, padding: 15 } } },
             scales: {
               x: { title: { display: true, text: 'Days' } },
               y: { title: { display: true, text: 'Average Temp (°C)' } }
@@ -702,38 +649,37 @@
 
       // Option 4: Position Comparison: Top (Red), Middle (Yellow), Bottom (Green)
       else if (selectedView === '4') {
-        const posGroup = { Top: {}, Middle: {}, Bottom: {} };
+        const allRaw = [...rawM, ...rawA];
+        const posMap = { Top: {}, Middle: {}, Bottom: {} };
 
-        filteredData.forEach(r => {
-          if (!r.Position) return;
-          const pos = String(r.Position).trim().toLowerCase();
-          let posCategory = null;
+        allRaw.forEach(r => {
+          if (!r.position) return;
+          let pos = null;
+          if (/top/i.test(r.position)) pos = 'Top';
+          else if (/mid/i.test(r.position)) pos = 'Middle';
+          else if (/bot/i.test(r.position)) pos = 'Bottom';
 
-          if (/top|atas/i.test(pos)) posCategory = 'Top';
-          else if (/mid|middle|tengah/i.test(pos)) posCategory = 'Middle';
-          else if (/bot|bottom|bawah|btm/i.test(pos)) posCategory = 'Bottom';
-
-          if (posCategory && r.Days !== undefined && r.Days !== null) {
-            if (!posGroup[posCategory][r.Days]) posGroup[posCategory][r.Days] = { sum: 0, count: 0 };
-            posGroup[posCategory][r.Days].sum += Number(r.Temp);
-            posGroup[posCategory][r.Days].count += 1;
+          if (pos) {
+            if (!posMap[pos][r.day]) posMap[pos][r.day] = { sum: 0, count: 0 };
+            posMap[pos][r.day].sum += r.temp;
+            posMap[pos][r.day].count += 1;
           }
         });
 
-        const getPosData = (posName) => uniqueDays.map(d => posGroup[posName][d] ? (posGroup[posName][d].sum / posGroup[posName][d].count).toFixed(2) : null);
+        const getPosData = (posName) => uniqueDays.map(d => posMap[posName][d] ? (posMap[posName][d].sum / posMap[posName][d].count).toFixed(2) : null);
 
         activeDetailedChart = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: uniqueDays,
+            labels: uniqueDays.map(d => `Day ${d}`),
             datasets: [
               { label: 'Top', data: getPosData('Top'), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.3, spanGaps: true },
               { label: 'Middle', data: getPosData('Middle'), borderColor: '#eab308', backgroundColor: '#eab308', tension: 0.3, spanGaps: true },
               { label: 'Bottom', data: getPosData('Bottom'), borderColor: '#22c55e', backgroundColor: '#22c55e', tension: 0.3, spanGaps: true }
             ]
           },
-          options: { 
-            responsive: true, 
+          options: {
+            responsive: true,
             maintainAspectRatio: false,
             scales: {
               x: { title: { display: true, text: 'Days' } },
@@ -745,36 +691,24 @@
 
       // Option 5: Morning vs Afternoon Average Temperature Comparison
       else if (selectedView === '5') {
-        const timeGroup = {};
-
-        filteredData.forEach(r => {
-          const day = r.Days;
-          const time = String(r.Time).trim();
-          let timeCategory = null;
-          if (/morning/i.test(time)) timeCategory = 'Morning';
-          else if (/afternoon/i.test(time)) timeCategory = 'Afternoon';
-
-          if (timeCategory && day !== undefined && day !== null) {
-            const key = `${day}_${timeCategory}`;
-            if (!timeGroup[key]) timeGroup[key] = { day: day, time: timeCategory, sum: 0, count: 0 };
-            timeGroup[key].sum += Number(r.Temp);
-            timeGroup[key].count += 1;
-          }
-        });
-
         const chronologicalLabels = [];
         const continuousData = [];
         const timeTypes = [];
 
         uniqueDays.forEach(day => {
-          ['Morning', 'Afternoon'].forEach(t => {
-            const key = `${day}_${t}`;
-            if (timeGroup[key]) {
-              chronologicalLabels.push(`${day} (${t})`);
-              continuousData.push((timeGroup[key].sum / timeGroup[key].count).toFixed(2));
-              timeTypes.push(t);
-            }
-          });
+          const m = aggM.find(d => d.day === day);
+          const a = aggA.find(d => d.day === day);
+
+          if (m) {
+            chronologicalLabels.push(`Day ${day} (Morning)`);
+            continuousData.push(m.temp);
+            timeTypes.push('Morning');
+          }
+          if (a) {
+            chronologicalLabels.push(`Day ${day} (Afternoon)`);
+            continuousData.push(a.temp);
+            timeTypes.push('Afternoon');
+          }
         });
 
         activeDetailedChart = new Chart(ctx, {
