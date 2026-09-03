@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Main EFB Composting & Analysis Dashboard</title>
+  <title>Main EFB Composting Dashboard</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -72,14 +72,12 @@
       display: inline-block;
     }
 
-    /* Styling Keterangan Perlakuan Heap */
     .heap-formula-subtitle {
-      color: #ffffff;
+      color: #475569;
       font-size: 11pt;
       font-weight: 500;
     }
 
-    /* Light theme overrides */
     .text-white { color: #0f172a !important; }
     .text-slate-300 { color: #475569 !important; }
     .text-slate-400 { color: #64748b !important; }
@@ -93,10 +91,6 @@
     .select-control option {
       background: #ffffff;
       color: #0f172a;
-    }
-
-    .heap-formula-subtitle {
-      color: #475569;
     }
   </style>
 </head>
@@ -132,7 +126,7 @@
           </select>
         </div>
       </div>
-      <div class="h-[380px] w-full relative">
+      <div class="h-[420px] w-full relative">
         <canvas id="mainHeapChart"></canvas>
       </div>
     </div>
@@ -193,7 +187,6 @@
   </div>
 
   <script>
-    // Unified Google Spreadsheets Data Source
     const BATCH2_ID = "1GkNivoXgBinhB6y-hM_JxfhNy-Kt2DE0KG6EStcvTe0";
     const BATCH1_ID = "1UwUsN1I9M9aeGZziCxLqRcloGOWkuYva_vklwbNZXyQ";
 
@@ -210,6 +203,116 @@
 
     let activeDetailedChart = null;
     let mainChart, tempCompChart;
+
+    // --- Custom Plugin untuk Menggambar "Day :" dan "Date :" persis sesuai contoh ---
+    const customXAxisPlugin = {
+  id: 'customXAxisPlugin',
+  afterDraw(chart) {
+    const { ctx, chartArea, scales } = chart;
+    const xAxis = scales.x;
+    if (!xAxis || !chart.config.options.plugins.customXAxisData) return;
+
+    const { days, datesMap } = chart.config.options.plugins.customXAxisData;
+
+    // Geser posisi Y sedikit ke atas dari batas padding baru agar teks muat sempurna
+    const yDay = chartArea.bottom + 15;  // Posisi Y baris Day
+    const yDate = chartArea.bottom + 32; // Posisi Y baris Date
+    const leftMargin = chartArea.left - 42; 
+
+    ctx.save();
+    ctx.font = '500 11px Inter, sans-serif';
+
+    // A. Teks Judul Kiri ("Day :" dan "Date :")
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'left';
+    ctx.fillText('Day :', leftMargin, yDay);
+    ctx.fillText('', leftMargin, yDate);
+
+    // B. Angka Day & Tanggal Pink
+    days.forEach((day, index) => {
+      const x = xAxis.getPixelForTick(index);
+
+      // Angka Hari
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(day), x, yDay);
+
+      // Tanggal Pink
+      if (datesMap[day]) {
+        ctx.fillStyle = '#334155';
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.fillText(datesMap[day], x, yDate);
+        ctx.font = '500 11px Inter, sans-serif';
+      }
+    });
+
+    ctx.restore();
+  }
+};
+
+    Chart.register(customXAxisPlugin);
+
+    // Marker Generator
+    function createNumberedMarker(number, bgColor = '#ef4444') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 20;
+      canvas.height = 20;
+      const ctx = canvas.getContext('2d');
+
+      ctx.beginPath();
+      ctx.arc(10, 10, 9, 0, 2 * Math.PI);
+      ctx.fillStyle = bgColor;
+      ctx.fill();
+
+      if (number !== undefined && number !== '') {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(number), 10, 10);
+      }
+
+      return canvas;
+    }
+
+    const markerDay0 = createNumberedMarker('', '#15803d');
+    const markerCache = {};
+    function getTOMarker(number) {
+      if (!markerCache[number]) {
+        markerCache[number] = createNumberedMarker(number, '#ef4444');
+      }
+      return markerCache[number];
+    }
+
+    // Date Parser & Calculator
+    function parseDateString(str) {
+      if (!str) return null;
+      let parts = String(str).trim().split(/[\/\-\.]/);
+      if (parts.length === 3) {
+        let d = parseInt(parts[0], 10);
+        let m = parseInt(parts[1], 10) - 1;
+        let y = parseInt(parts[2], 10);
+        if (y < 100) y += 2000;
+        return new Date(y, m, d);
+      }
+      return null;
+    }
+
+    function formatDateDDMMYYYY(dateObj) {
+      if (!dateObj || isNaN(dateObj.getTime())) return '';
+      let d = String(dateObj.getDate()).padStart(2, '0');
+      let m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      let y = dateObj.getFullYear();
+      return `${d}-${m}-${y}`;
+    }
+
+    function calculateDateForDay(baseDateObj, baseDayNum, targetDayNum) {
+      if (!baseDateObj) return '';
+      let diffDays = targetDayNum - baseDayNum;
+      let targetDate = new Date(baseDateObj);
+      targetDate.setDate(targetDate.getDate() + diffDays);
+      return formatDateDDMMYYYY(targetDate);
+    }
 
     window.addEventListener('DOMContentLoaded', async () => {
       initCharts();
@@ -299,8 +402,15 @@
           const chopping = r['Chopping'] ? String(r['Chopping']).trim() : '-';
           const shelter = r['Shelter'] ? String(r['Shelter']).trim() : '-';
 
+          const rawDays = r['Days'] !== undefined && r['Days'] !== null ? String(r['Days']) : '';
+          const extraDays = rawDays
+            .split(',')
+            .map(d => parseInt(d.trim(), 10))
+            .filter(d => !isNaN(d));
+
           map[variable] = {
             isTurning: isTurning,
+            extraDays: extraDays,
             formulaText: `${variable}: ${decomposer} + ${liter} + ${chopping} + ${shelter}`
           };
         }
@@ -313,9 +423,12 @@
       return rows.map(r => {
         const heapVal = r['Variable'] !== undefined ? String(r['Variable']).trim() : '';
         const dayVal = r['Days'] !== undefined ? parseNum(r['Days']) : parseNum(r['Day']);
+        const dateRaw = r['Start Date'] || r['Date'] || r['Tanggal'] || '';
+        
         return {
           heap: heapVal,
           day: dayVal,
+          startDateRaw: dateRaw ? String(dateRaw).trim() : '',
           sp: r['SP'] ? String(r['SP']).trim() : '',
           position: r['Position'] ? String(r['Position']).trim() : '',
           temp: parseNum(r['Temp']),
@@ -334,6 +447,9 @@
           aggregated[key].temp += item.temp;
           aggregated[key].moisture += item.moisture;
           aggregated[key].count += 1;
+          if (!aggregated[key].startDateRaw && item.startDateRaw) {
+            aggregated[key].startDateRaw = item.startDateRaw;
+          }
         }
       });
 
@@ -388,19 +504,31 @@
     }
 
     function initCharts() {
-      const ctxMain = document.getElementById('mainHeapChart').getContext('2d');
-      mainChart = new Chart(ctxMain, {
-        type: 'line',
-        data: { labels: [], datasets: [] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } },
-            y: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } }
-          }
+  const ctxMain = document.getElementById('mainHeapChart').getContext('2d');
+  mainChart = new Chart(ctxMain, {
+    type: 'line',
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: { 
+          bottom: 45, // Diperlebar ke bawah dari 25 ke 45 agar teks tanggal longgar
+          left: 15 
         }
-      });
+      },
+      plugins: {
+        customXAxisData: { days: [], datesMap: {} }
+      },
+      scales: {
+        x: { 
+          grid: { color: '#e2e8f0' }, 
+          ticks: { display: false }
+        },
+        y: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } }
+      }
+    }
+  });
 
       const ctxComp = document.getElementById('tempComparisonChart').getContext('2d');
       tempCompChart = new Chart(ctxComp, {
@@ -438,19 +566,50 @@
       const mode = document.getElementById('selectDisplayMode').value;
       const datasetStore = batchKey === 'B2' ? batch2Data : batch1Data;
 
-      const treatInfo = datasetStore.treatment[heap] || { isTurning: false, formulaText: '' };
-      
-      // Update Subtitle Teks Formula
+      const treatInfo = datasetStore.treatment[heap] || { isTurning: false, extraDays: [], formulaText: '' };
       document.getElementById('heapFormulaText').innerText = treatInfo.formulaText || `${heap}: -`;
 
       const mData = datasetStore.morning.filter(d => d.heap === heap);
       const aData = datasetStore.afternoon.filter(d => d.heap === heap);
 
       const days = Array.from(new Set([...mData.map(d => d.day), ...aData.map(d => d.day)])).sort((a,b)=>a-b);
-      
-      // Mengatur style titik merah turning point (Setiap kelipatan 7 hari)
-      const pointColors = days.map(day => (treatInfo.isTurning && day > 0 && day % 7 === 0) ? '#ef4444' : '#00a0fc');
-      const pointSizes = days.map(day => (treatInfo.isTurning && day > 0 && day % 7 === 0) ? 6 : 3);
+
+      // Cari Tanggal Acuan Kolom M
+      let baseRow = mData.find(d => d.day === -7 && d.startDateRaw) || mData.find(d => d.startDateRaw);
+      let baseDateObj = baseRow ? parseDateString(baseRow.startDateRaw) : null;
+      let baseDayNum = baseRow ? baseRow.day : -7;
+
+      const pointStyles = [];
+      const pointRadii = [];
+      const baseTurnDays = [7, 14, 21];
+
+      const extraDaysSorted = (treatInfo.extraDays || []).sort((a, b) => a - b);
+      const allTurnDays = Array.from(new Set([...baseTurnDays, ...extraDaysSorted])).sort((a, b) => a - b);
+
+      const datesMap = {};
+
+      days.forEach((day, idx) => {
+        const isMinDay = (idx === 0);
+        const isDayZero = (day === 0);
+        const isTurnDay = treatInfo.isTurning && allTurnDays.includes(day);
+
+        // Kalkulasi tanggal pink untuk Day -7, Day 0, dan Turn Over
+        if ((isMinDay || isDayZero || isTurnDay) && baseDateObj) {
+          datesMap[day] = calculateDateForDay(baseDateObj, baseDayNum, day);
+        }
+
+        if (day === 0) {
+          pointStyles.push(markerDay0);
+          pointRadii.push(6);
+        } else if (treatInfo.isTurning && isTurnDay) {
+          const turnIndex = allTurnDays.indexOf(day);
+          pointStyles.push(getTOMarker(turnIndex + 1));
+          pointRadii.push(8);
+        } else {
+          pointStyles.push('circle');
+          pointRadii.push(3);
+        }
+      });
 
       let datasets = [];
 
@@ -461,8 +620,8 @@
             data: days.map(day => (mData.find(d => d.day === day) || {}).temp || null), 
             borderColor: '#00a0fc', 
             tension: 0.3,
-            pointBackgroundColor: pointColors,
-            pointRadius: pointSizes
+            pointStyle: pointStyles,
+            pointRadius: pointRadii
           },
           { 
             label: 'Afternoon Temp (°C)', 
@@ -478,8 +637,8 @@
             data: days.map(day => (mData.find(d => d.day === day) || {}).temp || null), 
             borderColor: '#ff0099', 
             tension: 0.3,
-            pointBackgroundColor: pointColors,
-            pointRadius: pointSizes
+            pointStyle: pointStyles,
+            pointRadius: pointRadii
           },
           { label: 'Moisture (%)', data: days.map(day => (mData.find(d => d.day === day) || {}).moisture || null), borderColor: '#00a0fc', tension: 0.3 }
         ];
@@ -495,14 +654,16 @@
             }), 
             borderColor: '#3b82f6', 
             tension: 0.3,
-            pointBackgroundColor: pointColors,
-            pointRadius: pointSizes
+            pointStyle: pointStyles,
+            pointRadius: pointRadii
           }
         ];
       }
 
-      mainChart.data.labels = days.map(d => `Day ${d}`);
+      mainChart.data.labels = days.map(() => '');
       mainChart.data.datasets = datasets;
+      mainChart.options.plugins.customXAxisData = { days, datesMap };
+
       mainChart.update();
     }
 
@@ -527,9 +688,7 @@
       tempCompChart.update();
     }
 
-    /* ----------------------------------------------------
-       SECTION 3: DETAILED HEAP LOGIC
-    ---------------------------------------------------- */
+    /* DETAILED HEAP LOGIC */
     function renderSelectedChart() {
       if (activeDetailedChart) {
         activeDetailedChart.destroy();
