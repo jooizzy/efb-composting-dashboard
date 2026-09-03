@@ -40,9 +40,9 @@
       background-color: #ffffff;
       color: var(--text-main);
       border: 1px solid var(--card-border);
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
       outline: none;
       cursor: pointer;
       transition: border-color 0.2s;
@@ -70,12 +70,6 @@
       background-color: #10b981;
       border-radius: 50%;
       display: inline-block;
-    }
-
-    .heap-formula-subtitle {
-      color: #475569;
-      font-size: 11pt;
-      font-weight: 500;
     }
 
     .text-white { color: #0f172a !important; }
@@ -119,12 +113,51 @@
 
     <!-- Card 1: Main Heap Trend -->
     <div class="card">
-      <div class="flex flex-wrap justify-between items-center gap-4 mb-2">
-        <div class="flex items-center gap-4 flex-wrap">
-          <h2 class="text-lg font-semibold text-white">Heap Temperature & Moisture Trend</h2>
-          <div id="heapFormulaText" class="heap-formula-subtitle"></div>
+      <div class="flex flex-col gap-3 mb-4">
+        <div class="flex flex-wrap justify-between items-start gap-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white">Heap Temperature & Moisture Trend</h2>
+            <div id="heapFormulaText" class="text-xs text-slate-400 font-normal mt-0.5"></div>
+          </div>
+          
+          <!-- Legenda Indikator -->
+          <div class="flex items-center gap-4 text-xs text-slate-500 font-medium">
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block w-3 h-3 rounded-full bg-[#15803d]"></span>
+              <span>Adding decomposers</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="inline-block w-3 h-3 rounded-full bg-[#ef4444]"></span>
+              <span>Turn over</span>
+            </div>
+          </div>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
+
+        <!-- Filter & View Mode Dropdowns -->
+        <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+          <label class="text-xs text-slate-400">Chopping:</label>
+          <select id="selectFilterChopping" class="select-control">
+            <option value="All">All</option>
+            <option value="Chopping">Chopping</option>
+            <option value="Non Chopping">Non Chopping</option>
+          </select>
+
+          <label class="text-xs text-slate-400">Shelter:</label>
+          <select id="selectFilterShelter" class="select-control">
+            <option value="All">All</option>
+            <option value="Shelter">Shelter</option>
+            <option value="Non Shelter">Non Shelter</option>
+          </select>
+
+          <label class="text-xs text-slate-400">Decomposer:</label>
+          <select id="selectFilterDecomposer" class="select-control">
+            <option value="All">All</option>
+            <option value="INDMIRA">INDMIRA</option>
+            <option value="EM4">EM4</option>
+            <option value="AOA">AOA</option>
+            <option value="D1TSA">D1TSA</option>
+          </select>
+
           <label for="selectMainHeap" class="text-xs text-slate-400">Heap:</label>
           <select id="selectMainHeap" class="select-control"></select>
 
@@ -136,7 +169,9 @@
           </select>
         </div>
       </div>
-      <div class="h-[420px] w-full relative">
+
+      <!-- Tinggi kontainer ditambah sedikit agar ruang tanggal lapang -->
+      <div class="h-[460px] w-full relative">
         <canvas id="mainHeapChart"></canvas>
       </div>
     </div>
@@ -210,7 +245,7 @@
     let activeDetailedChart = null;
     let mainChart, tempCompChart;
 
-    // Custom Plugin X-Axis Axis Data
+    // Custom Plugin X-Axis Axis Data dengan Margin Bawah Diperluas
     const customXAxisPlugin = {
       id: 'customXAxisPlugin',
       afterDraw(chart) {
@@ -220,8 +255,9 @@
 
         const { days, datesMap } = chart.config.options.plugins.customXAxisData;
 
-        const yDay = chartArea.bottom + 15;
-        const yDate = chartArea.bottom + 32;
+        // Posisi Y diturunkan agar lapang dan tidak terpotong
+        const yDay = chartArea.bottom + 18;
+        const yDate = chartArea.bottom + 38;
         const leftMargin = chartArea.left - 42; 
 
         ctx.save();
@@ -423,6 +459,9 @@
             .filter(d => !isNaN(d));
 
           map[variable] = {
+            decomposer: decomposer,
+            chopping: chopping,
+            shelter: shelter,
             extraDays: extraDays,
             formulaText: `${variable}: ${decomposer} + ${liter} + ${chopping} + ${shelter}`
           };
@@ -488,28 +527,63 @@
       })).sort((a, b) => a.day - b.day);
     }
 
-    function initDropdowns() {
+    function populateMainHeapDropdown() {
+      const chopFilter = document.getElementById('selectFilterChopping').value;
+      const sheltFilter = document.getElementById('selectFilterShelter').value;
+      const decFilter = document.getElementById('selectFilterDecomposer').value;
       const mainHeapSelect = document.getElementById('selectMainHeap');
+      
+      const currentVal = mainHeapSelect.value;
+
+      const filtered = combinedHeapList.filter(item => {
+        const store = item.batchKey === 'B2' ? batch2Data : batch1Data;
+        const treat = store.treatment[item.heapName] || {};
+        
+        if (chopFilter && chopFilter !== 'All') {
+          if (!treat.chopping || treat.chopping.toLowerCase() !== chopFilter.toLowerCase()) return false;
+        }
+        if (sheltFilter && sheltFilter !== 'All') {
+          if (!treat.shelter || treat.shelter.toLowerCase() !== sheltFilter.toLowerCase()) return false;
+        }
+        if (decFilter && decFilter !== 'All') {
+          if (!treat.decomposer || treat.decomposer.toUpperCase() !== decFilter.toUpperCase()) return false;
+        }
+        return true;
+      });
+
+      mainHeapSelect.innerHTML = filtered.map(item => `<option value="${item.id}">${item.batchKey} - Heap ${item.heapName}</option>`).join('');
+
+      if (filtered.some(item => item.id === currentVal)) {
+        mainHeapSelect.value = currentVal;
+      } else if (filtered.length > 0) {
+        mainHeapSelect.value = filtered[0].id;
+      }
+
+      updateMainChart();
+      renderSelectedChart();
+      
+      const h1Select = document.getElementById('selectCompHeap1');
+      if (mainHeapSelect.value) {
+        h1Select.value = mainHeapSelect.value;
+        updateTempCompChart();
+      }
+    }
+
+    function initDropdowns() {
       const h1Select = document.getElementById('selectCompHeap1');
       const h2Select = document.getElementById('selectCompHeap2');
 
-      // Simpan state pilihan saat ini sebelum data direbuild
-      const currMain = mainHeapSelect.value;
       const currH1 = h1Select.value;
       const currH2 = h2Select.value;
-
-      mainHeapSelect.innerHTML = combinedHeapList.map(item => `<option value="${item.id}">${item.batchKey} - Heap ${item.heapName}</option>`).join('');
       
       const allOpts = combinedHeapList.map(item => `<option value="${item.id}">${item.label}</option>`).join('');
       h1Select.innerHTML = allOpts;
       h2Select.innerHTML = allOpts;
 
-      // Kembalikan pilihan user atau terapkan default
-      if (currMain) mainHeapSelect.value = currMain;
-      else mainHeapSelect.value = combinedHeapList[0]?.id || '';
+      populateMainHeapDropdown();
 
       if (currH1) h1Select.value = currH1;
-      else h1Select.value = mainHeapSelect.value;
+      else h1Select.value = document.getElementById('selectMainHeap').value;
 
       if (currH2) h2Select.value = currH2;
       else {
@@ -528,7 +602,12 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          layout: { padding: { bottom: 45, left: 15 } },
+          layout: { 
+            padding: { 
+              bottom: 60, // Padding bawah diperbesar agar tanggal aman dari potongan
+              left: 15 
+            } 
+          },
           plugins: { customXAxisData: { days: [], datesMap: {} } },
           scales: {
             x: { grid: { color: '#e2e8f0' }, ticks: { display: false } },
@@ -553,7 +632,6 @@
     }
 
     function setupEventListeners() {
-      // Tombol Refresh Data
       document.getElementById('refreshBtn').addEventListener('click', async (e) => {
         const btn = e.currentTarget;
         const icon = document.getElementById('refreshIcon');
@@ -569,6 +647,10 @@
         text.innerText = 'Refresh Data';
         icon.classList.remove('animate-spin');
       });
+
+      document.getElementById('selectFilterChopping').addEventListener('change', populateMainHeapDropdown);
+      document.getElementById('selectFilterShelter').addEventListener('change', populateMainHeapDropdown);
+      document.getElementById('selectFilterDecomposer').addEventListener('change', populateMainHeapDropdown);
 
       document.getElementById('selectMainHeap').addEventListener('change', () => {
         updateMainChart();
