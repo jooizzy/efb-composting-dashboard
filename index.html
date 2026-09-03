@@ -12,12 +12,12 @@
 
   <style>
     :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --card-border: #334155;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #3b82f6;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
     }
 
     body {
@@ -33,11 +33,11 @@
       border: 1px solid var(--card-border);
       border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
     }
 
     .select-control {
-      background-color: var(--bg-color);
+      background-color: #ffffff;
       color: var(--text-main);
       border: 1px solid var(--card-border);
       padding: 8px 12px;
@@ -77,6 +77,26 @@
       color: #ffffff;
       font-size: 11pt;
       font-weight: 500;
+    }
+
+    /* Light theme overrides */
+    .text-white { color: #0f172a !important; }
+    .text-slate-300 { color: #475569 !important; }
+    .text-slate-400 { color: #64748b !important; }
+    .text-blue-300 { color: #2563eb !important; }
+    .text-blue-400 { color: #1d4ed8 !important; }
+    .border-slate-700 { border-color: #e2e8f0 !important; }
+    .border-slate-700\/60 { border-color: rgba(226, 232, 240, 0.8) !important; }
+    .bg-blue-500\/20 { background-color: rgba(59, 130, 246, 0.10) !important; }
+    .border-blue-500\/30 { border-color: rgba(59, 130, 246, 0.25) !important; }
+
+    .select-control option {
+      background: #ffffff;
+      color: #0f172a;
+    }
+
+    .heap-formula-subtitle {
+      color: #475569;
     }
   </style>
 </head>
@@ -376,8 +396,8 @@
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+            x: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } },
+            y: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } }
           }
         }
       });
@@ -390,8 +410,8 @@
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+            x: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } },
+            y: { grid: { color: '#e2e8f0' }, ticks: { color: '#64748b' } }
           }
         }
       });
@@ -563,8 +583,8 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-              x: { title: { display: true, text: 'Days' } },
-              y: { title: { display: true, text: 'Average Temp (°C)' } }
+              x: { title: { display: true, text: 'Days', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
+              y: { title: { display: true, text: 'Average Temp (°C)', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } }
             }
           }
         });
@@ -621,19 +641,19 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-              x: { title: { display: true, text: 'Chronological Session' } },
+              x: { title: { display: true, text: 'Chronological Session', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
               y: {
                 type: 'linear',
                 display: true,
                 position: 'left',
-                title: { display: true, text: 'Average Temp (°C)' }
+                title: { display: true, text: 'Average Temp (°C)', color: '#475569' }
               },
               y1: {
                 type: 'linear',
                 display: true,
                 position: 'right',
                 grid: { drawOnChartArea: false },
-                title: { display: true, text: 'Average Moisture (%)' }
+                title: { display: true, text: 'Average Moisture (%)', color: '#475569' }
               }
             }
           }
@@ -694,8 +714,8 @@
             maintainAspectRatio: false,
             plugins: { legend: { position: 'top', labels: { boxWidth: 15, padding: 15 } } },
             scales: {
-              x: { title: { display: true, text: 'Days' } },
-              y: { title: { display: true, text: 'Average Temp (°C)' } }
+              x: { title: { display: true, text: 'Days', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
+              y: { title: { display: true, text: 'Average Temp (°C)', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } }
             }
           }
         });
@@ -734,8 +754,8 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-              x: { title: { display: true, text: 'Days' } },
-              y: { title: { display: true, text: 'Average Temp (°C)' } }
+              x: { title: { display: true, text: 'Days', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
+              y: { title: { display: true, text: 'Average Temp (°C)', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } }
             }
           }
         });
@@ -794,8 +814,8 @@
               }
             },
             scales: {
-              y: { title: { display: true, text: 'Temperature (°C)' } },
-              x: { title: { display: true, text: 'Chronological Day & Time (Morning - Afternoon)' } }
+              y: { title: { display: true, text: 'Temperature (°C)', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } },
+              x: { title: { display: true, text: 'Chronological Day & Time (Morning - Afternoon)', color: '#475569' }, ticks: { color: '#64748b' }, grid: { color: '#e2e8f0' } }
             }
           }
         });
