@@ -101,8 +101,17 @@
       <h1 class="text-2xl font-bold text-white">Main EFB Composting Dashboard</h1>
       <p class="text-sm text-slate-400">Real-time Tracking & Multi-Batch Comparative Analysis for Empty Fruit Bunch Composting</p>
     </div>
-    <div class="status-badge" id="syncStatus">
-      <span class="status-dot"></span> Synchronizing Data...
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Tombol Refresh Data -->
+      <button id="refreshBtn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm active:scale-95 disabled:opacity-50">
+        <svg id="refreshIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <span id="refreshText">Refresh Data</span>
+      </button>
+      <div class="status-badge" id="syncStatus">
+        <span class="status-dot"></span> Synchronizing Data...
+      </div>
     </div>
   </div>
 
@@ -481,20 +490,33 @@
 
     function initDropdowns() {
       const mainHeapSelect = document.getElementById('selectMainHeap');
-      mainHeapSelect.innerHTML = combinedHeapList.map(item => `<option value="${item.id}">${item.batchKey} - Heap ${item.heapName}</option>`).join('');
-
       const h1Select = document.getElementById('selectCompHeap1');
       const h2Select = document.getElementById('selectCompHeap2');
-      const allOpts = combinedHeapList.map(item => `<option value="${item.id}">${item.label}</option>`).join('');
+
+      // Simpan state pilihan saat ini sebelum data direbuild
+      const currMain = mainHeapSelect.value;
+      const currH1 = h1Select.value;
+      const currH2 = h2Select.value;
+
+      mainHeapSelect.innerHTML = combinedHeapList.map(item => `<option value="${item.id}">${item.batchKey} - Heap ${item.heapName}</option>`).join('');
       
+      const allOpts = combinedHeapList.map(item => `<option value="${item.id}">${item.label}</option>`).join('');
       h1Select.innerHTML = allOpts;
       h2Select.innerHTML = allOpts;
 
-      h1Select.value = mainHeapSelect.value;
+      // Kembalikan pilihan user atau terapkan default
+      if (currMain) mainHeapSelect.value = currMain;
+      else mainHeapSelect.value = combinedHeapList[0]?.id || '';
 
-      const defaultB = combinedHeapList.find(h => h.heapName === '2.1B') || combinedHeapList[1] || combinedHeapList[0];
-      if (defaultB) {
-        h2Select.value = defaultB.id;
+      if (currH1) h1Select.value = currH1;
+      else h1Select.value = mainHeapSelect.value;
+
+      if (currH2) h2Select.value = currH2;
+      else {
+        const defaultB = combinedHeapList.find(h => h.heapName === '2.1B') || combinedHeapList[1] || combinedHeapList[0];
+        if (defaultB) {
+          h2Select.value = defaultB.id;
+        }
       }
     }
 
@@ -531,6 +553,23 @@
     }
 
     function setupEventListeners() {
+      // Tombol Refresh Data
+      document.getElementById('refreshBtn').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        const icon = document.getElementById('refreshIcon');
+        const text = document.getElementById('refreshText');
+        
+        btn.disabled = true;
+        text.innerText = 'Syncing...';
+        icon.classList.add('animate-spin');
+        
+        await fetchAllData();
+        
+        btn.disabled = false;
+        text.innerText = 'Refresh Data';
+        icon.classList.remove('animate-spin');
+      });
+
       document.getElementById('selectMainHeap').addEventListener('change', () => {
         updateMainChart();
         renderSelectedChart();
@@ -673,6 +712,7 @@
       }
 
       const selectedMainHeap = document.getElementById('selectMainHeap').value || "B2_A";
+      if(!selectedMainHeap) return;
       const [batchKey, selectedHeapName] = selectedMainHeap.split('_');
 
       document.getElementById('selectedHeapLabel').innerText = `Active Heap: ${batchKey} - Heap ${selectedHeapName}`;
