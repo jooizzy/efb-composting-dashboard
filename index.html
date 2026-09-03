@@ -839,16 +839,21 @@
         });
 
         const targetOrder = [
-          { key: 'A-Top', label: 'A-Top', color: '#ef4444' },
-          { key: 'A-Middle', label: 'A-Middle', color: '#f97316' },
-          { key: 'A-Bottom', label: 'A-Bottom', color: '#eab308' },
-          { key: 'B-Top', label: 'B-Top', color: '#22c55e' },
-          { key: 'B-Middle', label: 'B-Middle', color: '#06b6d4' },
-          { key: 'B-Bottom', label: 'B-Bottom', color: '#3b82f6' },
-          { key: 'C-Top', label: 'C-Top', color: '#8b5cf6' },
-          { key: 'C-Middle', label: 'C-Middle', color: '#d946ef' },
-          { key: 'C-Bottom', label: 'C-Bottom', color: '#f43f5e' }
-        ];
+  // Kolom 1 (Merah - Pink)
+  { key: 'A-Top',    label: 'A-Top',    color: '#d60029' }, // Merah Tua / Crimson
+  { key: 'A-Middle', label: 'A-Middle', color: '#ff0000' }, // Merah Terang
+  { key: 'A-Bottom', label: 'A-Bottom', color: '#ff00a0' }, // Magenta / Pink Terang
+
+  // Kolom 2 (Biru Navy - Cyan)
+  { key: 'B-Top',    label: 'B-Top',    color: '#08007a' }, // Navy / Biru Gelap
+  { key: 'B-Middle', label: 'B-Middle', color: '#0066ff' }, // Biru Cerah
+  { key: 'B-Bottom', label: 'B-Bottom', color: '#00e5ff' }, // Cyan / Biru Muda
+
+  // Kolom 3 (Hijau - Kuning)
+  { key: 'C-Top',    label: 'C-Top',    color: '#009900' }, // Hijau Tua
+  { key: 'C-Middle', label: 'C-Middle', color: '#a2ff00' }, // Hijau Lime / Chartreuse
+  { key: 'C-Bottom', label: 'C-Bottom', color: '#ffff00' }  // Kuning Terang
+];
 
         const datasets = targetOrder.map(item => {
           const dayMap = spPosMap[item.key] || {};
