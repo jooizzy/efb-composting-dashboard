@@ -156,10 +156,30 @@
   <!-- MAIN SCROLLABLE CONTENT (12 CHARTS) -->
   <div class="main-content">
     
-    <!-- 1. Daily Avg Temp -->
+    <!-- 1. Daily Avg Temp & Additional Overlays -->
     <div class="card">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-lg font-bold text-slate-800">1. Daily Avg Temperature Trend (Turning Point)</h2>
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800">1. Daily Avg Temperature Trend (Turning Point)</h2>
+          <!-- Toggles UI -->
+          <div class="flex flex-wrap items-center gap-3 mt-3" id="chart1Controls">
+            <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
+              <input type="checkbox" class="c1-toggle" data-idx="1"> Avg Heap's Moisture
+            </label>
+            <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
+              <input type="checkbox" class="c1-toggle" data-idx="2"> Avg Heap's pH
+            </label>
+            <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
+              <input type="checkbox" class="c1-toggle" data-idx="3"> Pome's pH
+            </label>
+            <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
+              <input type="checkbox" class="c1-toggle" data-idx="4"> Morning Ambient
+            </label>
+            <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
+              <input type="checkbox" class="c1-toggle" data-idx="5"> Avg Ambient
+            </label>
+          </div>
+        </div>
         <div class="flex items-center gap-4 text-xs font-medium">
           <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#15803d]"></span><span>Adding decomposers</span></div>
           <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#ef4444]"></span><span>Turn over</span></div>
@@ -292,7 +312,6 @@
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         ctx.fillText(dayLabel, leftMargin, yDay);
-        // Label "Date" dihilangkan sesuai permintaan
 
         let lastDrawnDay = null;
 
@@ -328,18 +347,28 @@
     };
     Chart.register(customXAxisPlugin);
 
-    // --- Custom Plugin: Crosshair (Vertical Line on Hover) ---
+    // --- Custom Plugin: Crosshair (Vertical & Horizontal Line on Hover) ---
     const crosshairPlugin = {
       id: 'crosshairPlugin',
       afterDraw(chart) {
         if (chart.tooltip && chart.tooltip.opacity > 0) {
-          const { ctx, chartArea: { top, bottom } } = chart;
+          const { ctx, chartArea: { top, bottom, left, right } } = chart;
+          
+          // Menggunakan caretX dan caretY bawaan agar animasinya seirama & mulus
           const x = chart.tooltip.caretX;
+          const y = chart.tooltip.caretY;
 
           ctx.save();
           ctx.beginPath();
+          
+          // Garis Vertikal
           ctx.moveTo(x, top);
           ctx.lineTo(x, bottom);
+          
+          // Garis Horizontal
+          ctx.moveTo(left, y);
+          ctx.lineTo(right, y);
+
           ctx.lineWidth = 1;
           ctx.strokeStyle = '#94a3b8'; 
           ctx.setLineDash([5, 5]);
@@ -391,8 +420,6 @@
       if (!value || value === "0" || value === "-") return null;
 
       let match;
-
-      // Format ISO: YYYY-MM-DD
       match = value.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
       if (match) {
         const y = parseInt(match[1], 10);
@@ -402,14 +429,12 @@
         if (date.getFullYear() === y && date.getMonth() === m && date.getDate() === d) return date;
       }
 
-      // Format Indonesia: DD/MM/YYYY atau DD-MM-YYYY (Contoh: 14/07/2026)
       match = value.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:\s|$)/);
       if (match) {
         const d = parseInt(match[1], 10); 
         const m = parseInt(match[2], 10) - 1; 
         let y = parseInt(match[3], 10);
         if (y < 100) y += 2000;
-
         const date = new Date(y, m, d);
         if (date.getFullYear() === y && date.getMonth() === m && date.getDate() === d) return date;
       }
@@ -422,7 +447,6 @@
       return null;
     }
 
-    // Format tanggal angka saja (DD-MM-YYYY)
     function formatDateLong(dateObj) {
       if (!dateObj || isNaN(dateObj.getTime())) return '';
       const d = String(dateObj.getDate()).padStart(2, '0');
@@ -534,10 +558,7 @@
       const header = rows[0].map(h => String(h).trim().toLowerCase());
       const varIdx = header.indexOf('variable') !== -1 ? header.indexOf('variable') : 0;
       const dayIdx = header.findIndex(h => h === 'days' || h === 'day');
-      
-      // Paksa ambil kolom indeks ke-12 (Kolom M: Tanggal) secara langsung
       const dateIdx = 12;
-
       const spIdx = header.indexOf('sp');
       const posIdx = header.indexOf('position');
       const tempIdx = header.indexOf('temp');
@@ -574,7 +595,10 @@
           obj.ph = parseNumOrNull(r[5]);   
           obj.temp = parseNumOrNull(r[6]); 
         } else {
-          obj.temp = parseNumOrNull(r[6]); 
+          // Parsing Ambient
+          obj.temp = parseNumOrNull(r[6]);                 // G (08:00)
+          obj.tempNoon = (r.length > 8) ? parseNumOrNull(r[8]) : null;        // I (12:00)
+          obj.tempAfternoon = (r.length > 10) ? parseNumOrNull(r[10]) : null; // K (16:00)
         }
         result.push(obj);
       }
@@ -649,8 +673,20 @@
       document.getElementById('selectMainHeap').addEventListener('change', renderAllCharts);
       document.getElementById('selectComp1').addEventListener('change', () => renderAllCharts());
       document.getElementById('selectComp2').addEventListener('change', () => renderAllCharts());
+
+      // Toggle Listener for Chart 1 Overlays
+      document.querySelectorAll('.c1-toggle').forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          if (charts['chart1']) {
+            const idx = parseInt(e.target.getAttribute('data-idx'));
+            charts['chart1'].setDatasetVisibility(idx, e.target.checked);
+            charts['chart1'].update();
+          }
+        });
+      });
     }
 
+    // --- Chart Renderer Helpers ---
     // --- Chart Renderer Helpers ---
     function getBaseChartConfig(type, datasets, days, datesMap) {
       return {
@@ -660,7 +696,10 @@
           responsive: true, maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           layout: { padding: { bottom: 75, left: 15 } },
-          plugins: { customXAxisData: { days, datesMap, dayLabel: 'Day :' } },
+          plugins: { 
+            customXAxisData: { days, datesMap, dayLabel: 'Day :' },
+            tooltip: { position: 'nearest' } // <--- TAMBAHKAN BARIS INI
+          },
           scales: {
             x: { 
               grid: { display: true, color: '#e2e8f0' },
@@ -703,7 +742,6 @@
       const data = getHeapData(heapId);
       document.getElementById('heapFormulaText').innerText = `Formula: Heap ${data.name} => ${data.treat.formulaText}`;
 
-      // Global Day Mapping
       const allTurnDays = Array.from(new Set(data.treat.extraDays)).sort((a, b) => a - b);
       let days = Array.from(new Set([...data.m.map(d=>d.day), ...data.a.map(d=>d.day), ...allTurnDays])).sort((a,b) => a - b);
 
@@ -742,22 +780,70 @@
         else { pointStyles.push('circle'); pointRadii.push(3); }
       });
 
-      // Chart 1: Daily Avg Temp
+
+      /* =======================================
+         Chart 1: Daily Avg Temp & Additional Overlays
+         ======================================= */
       let c1Data = days.map(d => {
         const mv = data.m.find(x=>x.day===d), av = data.a.find(x=>x.day===d);
         if(mv && mv.temp && av && av.temp) return (mv.temp + av.temp)/2;
         return (mv||av||{}).temp || null;
       });
+
+      let moistData = days.map(d => {
+        const mv = data.m.find(x=>x.day===d), av = data.a.find(x=>x.day===d);
+        if(mv && mv.moisture && av && av.moisture) return (mv.moisture + av.moisture)/2;
+        return (mv||av||{}).moisture || null;
+      });
+
+      let heapPhData = days.map(d => {
+        let arr = data.rm.filter(x => x.day === d && x.ph > 0);
+        return arr.length ? +(arr.reduce((s,x)=>s+x.ph,0)/arr.length).toFixed(2) : null;
+      });
+
+      let pomePhData = days.map(d => getAuxVal(data.name, d, pomeRaw, 'ph'));
+      let morningAmbData = days.map(d => getAuxVal(data.name, d, ambientRaw, 'temp'));
+
+      let avgAmbData = days.map(d => {
+        const m = getAuxVal(data.name, d, ambientRaw, 'temp');
+        const n = getAuxVal(data.name, d, ambientRaw, 'tempNoon');
+        const a = getAuxVal(data.name, d, ambientRaw, 'tempAfternoon');
+        let sum = 0, count = 0;
+        if (m !== null) { sum += m; count++; }
+        if (n !== null) { sum += n; count++; }
+        if (a !== null) { sum += a; count++; }
+        return count > 0 ? +(sum/count).toFixed(2) : null;
+      });
+
+      const getCheckState = (idx) => {
+        const chk = document.querySelector(`.c1-toggle[data-idx="${idx}"]`);
+        return chk ? !chk.checked : true; // "hidden" property is opposite of checked state
+      };
+
       let c1Conf = getBaseChartConfig('line', [
-        { label: 'Avg Temp (°C)', data: c1Data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+        { label: 'Avg Temp (°C)', data: c1Data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y' },
+        { label: "Avg Heap's Moisture (%)", data: moistData, borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y', hidden: getCheckState(1) },
+        { label: "Avg Heap's pH", data: heapPhData, borderColor: '#8b5cf6', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y1', hidden: getCheckState(2) },
+        { label: "Pome's pH", data: pomePhData, borderColor: '#06b6d4', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y1', hidden: getCheckState(3) },
+        { label: "Morning Ambient (°C)", data: morningAmbData, borderColor: '#10b981', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y', hidden: getCheckState(4) },
+        { label: "Avg Ambient (°C)", data: avgAmbData, borderColor: '#f59e0b', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y', hidden: getCheckState(5) }
       ], days, datesMap);
+
+      // Customize scale for Chart 1 specific (pH Axis)
+      c1Conf.options.scales.y1 = {
+        type: 'linear',
+        display: true,
+        position: 'right',
+        grid: { drawOnChartArea: false }
+      };
+
       drawChart('chart1', c1Conf);
+
 
       // Chart 2: Continuous Segmented M/A
       const c2Labels = [], c2Data = [], c2TimeTypes = [], c2Days = [], c2DatesMap = {};
       days.forEach(d => {
         const mv = data.m.find(x=>x.day===d), av = data.a.find(x=>x.day===d);
-
         if(mv && mv.temp) { 
           c2Labels.push(String(d)); 
           c2Data.push(mv.temp); 
@@ -886,22 +972,15 @@
       });
 
       let c11Conf = getBaseChartConfig('line', [
-        // Sampling Point A
         { label: 'A-Top', data: getSpPosAvg('A', 'top'), borderColor: '#d60029', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
         { label: 'A-Middle', data: getSpPosAvg('A', 'mid'), borderColor: '#ff0000', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
         { label: 'A-Bottom', data: getSpPosAvg('A', 'bot'), borderColor: '#ff00a0', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
-        
-        // Sampling Point B
         { label: 'B-Top', data: getSpPosAvg('B', 'top'), borderColor: '#08007a', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
         { label: 'B-Middle', data: getSpPosAvg('B', 'mid'), borderColor: '#0066ff', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
         { label: 'B-Bottom', data: getSpPosAvg('B', 'bot'), borderColor: '#00e5ff', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
-        
-        // Sampling Point C
         { label: 'C-Top', data: getSpPosAvg('C', 'top'), borderColor: '#009900', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
         { label: 'C-Middle', data: getSpPosAvg('C', 'mid'), borderColor: '#a2ff00', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
         { label: 'C-Bottom', data: getSpPosAvg('C', 'bot'), borderColor: '#ffff00', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
-
-        // POME & Ambient
         { label: `POME Temp`, data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'temp')), borderColor: '#a855f7', borderDash: [5,5], tension: 0.3, spanGaps: true },
         { label: `Ambient Temp 08:00`, data: days.map(d => getAuxVal(data.name, d, ambientRaw, 'temp')), borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.3, spanGaps: true }
       ], days, datesMap);
