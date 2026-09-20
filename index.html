@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Composting of Oil Palm Empty Fruit Bunches Dashboard</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      margin: 0;
+      padding: 0;
+      line-height: 1.5;
+    }
+
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background-color: var(--bg-color);
+      padding: 20px 24px 16px 24px;
+      border-bottom: 1px solid var(--card-border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .main-content {
+      padding: 24px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+    }
+
+    .select-control {
+      background-color: #ffffff;
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .select-control:focus {
+      border-color: var(--primary);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .chart-container {
+      height: 460px;
+      width: 100%;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- STICKY HEADER -->
+  <div class="sticky-header">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-800">Composting of Oil Palm Empty Fruit Bunches Dashboard</h1>
+        <p id="heapFormulaText" class="text-sm text-slate-500 font-medium mt-1">Formula: -</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <button id="refreshBtn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-sm active:scale-95 disabled:opacity-50">
+          <svg id="refreshIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span id="refreshText">Refresh Data</span>
+        </button>
+        <div class="status-badge" id="syncStatus">
+          <span class="status-dot"></span> Synchronizing...
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="flex flex-wrap items-center gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+      <div class="flex items-center gap-2">
+        <label for="selectMainHeap" class="text-sm text-slate-800 font-bold">Target Heap:</label>
+        <select id="selectMainHeap" class="select-control bg-blue-50 border-blue-300 font-bold text-blue-700"></select>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-slate-600 font-semibold">Chopping:</label>
+        <select id="selectFilterChopping" class="select-control">
+          <option value="All">All</option>
+          <option value="Chopping">Chopping</option>
+          <option value="Non Chopping">Non Chopping</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-slate-600 font-semibold">Shelter:</label>
+        <select id="selectFilterShelter" class="select-control">
+          <option value="All">All</option>
+          <option value="Shelter">Shelter</option>
+          <option value="Non Shelter">Non Shelter</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-slate-600 font-semibold">Decomposer:</label>
+        <select id="selectFilterDecomposer" class="select-control">
+          <option value="All">All</option>
+          <option value="INDMIRA">INDMIRA</option>
+          <option value="EM4">EM4</option>
+          <option value="AOA">AOA</option>
+          <option value="D1TSA">D1TSA</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN SCROLLABLE CONTENT (12 CHARTS) -->
+  <div class="main-content">
+    
+    <!-- 1. Daily Avg Temp -->
+    <div class="card">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-bold text-slate-800">1. Daily Avg Temperature Trend (Turning Point)</h2>
+        <div class="flex items-center gap-4 text-xs font-medium">
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#15803d]"></span><span>Adding decomposers</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-[#ef4444]"></span><span>Turn over</span></div>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="chart1"></canvas></div>
+    </div>
+
+    <!-- 2. Continuous M/A Trend -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">2. Continuous Heap Temperature (Morning–Afternoon Segments)</h2>
+      <div class="chart-container"><canvas id="chart2"></canvas></div>
+    </div>
+
+    <!-- 3. Morning vs Afternoon -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">3. Morning vs. Afternoon Avg Temperature</h2>
+      <div class="chart-container"><canvas id="chart3"></canvas></div>
+    </div>
+
+    <!-- 4. Temp vs Moisture -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">4. Avg Temperature vs. Moisture</h2>
+      <div class="chart-container"><canvas id="chart4"></canvas></div>
+    </div>
+
+    <!-- 5. Temp by Sampling Point -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">5. Temperature by Sampling Point (Top, Middle, Bottom)</h2>
+      <div class="chart-container"><canvas id="chart5"></canvas></div>
+    </div>
+
+    <!-- 6. Morning Moisture -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">6. Morning Heap Moisture (Setpoint 40-70%)</h2>
+      <div class="chart-container"><canvas id="chart6"></canvas></div>
+    </div>
+
+    <!-- 7. Moisture by SP -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">7. Moisture by Sampling Point</h2>
+      <div class="chart-container"><canvas id="chart7"></canvas></div>
+    </div>
+
+    <!-- 8. Avg pH -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">8. Avg pH: Heap vs. POME</h2>
+      <div class="chart-container"><canvas id="chart8"></canvas></div>
+    </div>
+
+    <!-- 9. pH by SP -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">9. Heap pH by Sampling Point vs. POME</h2>
+      <div class="chart-container"><canvas id="chart9"></canvas></div>
+    </div>
+
+    <!-- 10. Temp Comparison -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">10. Temp Comparison: Heap, POME & Ambient (08:00)</h2>
+      <div class="chart-container"><canvas id="chart10"></canvas></div>
+    </div>
+
+    <!-- 11. Detailed Temp -->
+    <div class="card">
+      <h2 class="text-lg font-bold text-slate-800 mb-4">11. Detailed Temp: Heap Points, POME & Ambient (08:00)</h2>
+      <div class="chart-container"><canvas id="chart11"></canvas></div>
+    </div>
+
+    <!-- 12. Compare Heaps -->
+    <div class="card bg-slate-50 border-blue-200">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+        <h2 class="text-lg font-bold text-blue-700">12. Variable Temp Comparison</h2>
+        <div class="flex gap-3">
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-semibold text-slate-600">Compare with 1:</label>
+            <select id="selectComp1" class="select-control"></select>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-semibold text-slate-600">Compare with 2:</label>
+            <select id="selectComp2" class="select-control"></select>
+          </div>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="chart12"></canvas></div>
+    </div>
+
+  </div>
+
+  <script>
+    const BATCH2_ID = "1GkNivoXgBinhB6y-hM_JxfhNy-Kt2DE0KG6EStcvTe0";
+    const BATCH1_ID = "1UwUsN1I9M9aeGZziCxLqRcloGOWkuYva_vklwbNZXyQ";
+
+    const BATCH1_SHEET_MORNING = "Batch 1 Morning";
+    const BATCH1_SHEET_AFTERNOON = "Batch 1 Afternoon";
+    const BATCH2_SHEET_MORNING = "Batch 2 Morning";
+    const BATCH2_SHEET_AFTERNOON = "Batch 2 Afternoon";
+    const SHEET_HEAP_TREATMENT = "HeapTreatment";
+    const SHEET_PH_POME = "pH Pome";
+    const SHEET_AMBIENT = "Ambient";
+
+    let batch2Data = { morning: [], afternoon: [], rawMorning: [], rawAfternoon: [], treatment: {} };
+    let batch1Data = { morning: [], afternoon: [], rawMorning: [], rawAfternoon: [], treatment: {} };
+    let heapListB2 = [];
+    let heapListB1 = [];
+    let combinedHeapList = [];
+    
+    let pomeRaw = [];
+    let ambientRaw = [];
+
+    // Store chart instances
+    const charts = {};
+
+    // --- Custom Plugin: Day & Slanted Date Axis Customizer ---
+    const customXAxisPlugin = {
+      id: 'customXAxisPlugin',
+      afterDraw(chart) {
+        const { ctx, chartArea, scales } = chart;
+        const xAxis = scales.x;
+        const cfg = chart.config.options.plugins.customXAxisData;
+        if (!xAxis || !cfg || !Array.isArray(cfg.days)) return;
+
+        const { days, datesMap = {}, dayLabel = 'Day :' } = cfg;
+        const yDay = chartArea.bottom + 18;
+        const yDate = chartArea.bottom + 36;
+        const leftMargin = chartArea.left - 30;
+
+        ctx.save();
+        ctx.font = '500 11px Inter, sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(dayLabel, leftMargin, yDay);
+        // Label "Date" dihilangkan sesuai permintaan
+
+        let lastDrawnDay = null;
+
+        days.forEach((day, index) => {
+          if (day === '' || day === null || day === undefined || day === lastDrawnDay) return;
+          lastDrawnDay = day;
+
+          const x = xAxis.getPixelForTick(index);
+          if (!Number.isFinite(x)) return;
+
+          ctx.save();
+          ctx.fillStyle = '#64748b';
+          ctx.font = '500 11px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(String(day), x, yDay);
+          ctx.restore();
+
+          const dateText = datesMap[day];
+          if (dateText) {
+            ctx.save();
+            ctx.translate(x, yDate);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillStyle = '#334155';
+            ctx.font = '500 10px Inter, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(dateText), 0, 0);
+            ctx.restore();
+          }
+        });
+        ctx.restore();
+      }
+    };
+    Chart.register(customXAxisPlugin);
+
+    // --- Custom Plugin: Crosshair (Vertical Line on Hover) ---
+    const crosshairPlugin = {
+      id: 'crosshairPlugin',
+      afterDraw(chart) {
+        if (chart.tooltip && chart.tooltip.opacity > 0) {
+          const { ctx, chartArea: { top, bottom } } = chart;
+          const x = chart.tooltip.caretX;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(x, top);
+          ctx.lineTo(x, bottom);
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#94a3b8'; 
+          ctx.setLineDash([5, 5]);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    };
+    Chart.register(crosshairPlugin);
+
+    // --- Marker Generation ---
+    function createNumberedMarker(number, bgColor = '#ef4444') {
+      const canvas = document.createElement('canvas');
+      canvas.width = 18;
+      canvas.height = 18;
+      const ctx = canvas.getContext('2d');
+      ctx.beginPath();
+      ctx.arc(9, 9, 8, 0, 2 * Math.PI);
+      ctx.fillStyle = bgColor;
+      ctx.fill();
+      if (number !== undefined && number !== '') {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(number), 9, 9);
+      }
+      return canvas;
+    }
+    const markerDay0 = createNumberedMarker('', '#15803d');
+    const markerCache = {};
+    function getTOMarker(number) {
+      if (!markerCache[number]) {
+        markerCache[number] = createNumberedMarker(number, '#ef4444');
+      }
+      return markerCache[number];
+    }
+
+    // --- Parsing Utils ---
+    function parseDateString(str) {
+      if (!str) return null;
+
+      if (str instanceof Date) {
+        if (isNaN(str.getTime())) return null;
+        return new Date(str.getFullYear(), str.getMonth(), str.getDate());
+      }
+
+      const value = String(str).trim();
+      if (!value || value === "0" || value === "-") return null;
+
+      let match;
+
+      // Format ISO: YYYY-MM-DD
+      match = value.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+      if (match) {
+        const y = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10) - 1;
+        const d = parseInt(match[3], 10);
+        const date = new Date(y, m, d);
+        if (date.getFullYear() === y && date.getMonth() === m && date.getDate() === d) return date;
+      }
+
+      // Format Indonesia: DD/MM/YYYY atau DD-MM-YYYY (Contoh: 14/07/2026)
+      match = value.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:\s|$)/);
+      if (match) {
+        const d = parseInt(match[1], 10); 
+        const m = parseInt(match[2], 10) - 1; 
+        let y = parseInt(match[3], 10);
+        if (y < 100) y += 2000;
+
+        const date = new Date(y, m, d);
+        if (date.getFullYear() === y && date.getMonth() === m && date.getDate() === d) return date;
+      }
+
+      const parsed = new Date(value);
+      if (!isNaN(parsed.getTime())) {
+        return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      }
+
+      return null;
+    }
+
+    // Format tanggal angka saja (DD-MM-YYYY)
+    function formatDateLong(dateObj) {
+      if (!dateObj || isNaN(dateObj.getTime())) return '';
+      const d = String(dateObj.getDate()).padStart(2, '0');
+      const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+      const y = dateObj.getFullYear();
+      return `${d}-${m}-${y}`;
+    }
+
+    function calculateDateForDay(baseDateObj, baseDayNum, targetDayNum) {
+      if (!baseDateObj) return '';
+      let targetDate = new Date(baseDateObj);
+      targetDate.setDate(targetDate.getDate() + (targetDayNum - baseDayNum));
+      return formatDateLong(targetDate);
+    }
+    
+    function parseNumOrNull(val) {
+      if (val === undefined || val === null || val === '') return null;
+      let strVal = String(val).replace(',', '.').trim();
+      if (strVal === '') return null;
+      let num = parseFloat(strVal);
+      return isNaN(num) ? null : num;
+    }
+
+    // --- Main Initialization ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      Chart.defaults.color = '#64748b';
+      Chart.defaults.borderColor = '#e2e8f0';
+      Chart.defaults.font.family = "'Inter', sans-serif";
+      setupEventListeners();
+      await fetchAllData();
+    });
+
+    function getGvizUrl(spreadsheetId, sheetName) {
+      return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    }
+
+    async function fetchAllData() {
+      const statusEl = document.getElementById('syncStatus');
+      try {
+        statusEl.innerHTML = `<span class="status-dot" style="background-color:#f59e0b;"></span> Syncing Data...`;
+        const [b1M, b1A, b1T, b2M, b2A, b2T, pome, ambient] = await Promise.all([
+          fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_MORNING)), fetchCSV(getGvizUrl(BATCH1_ID, BATCH1_SHEET_AFTERNOON)), fetchCSV(getGvizUrl(BATCH1_ID, SHEET_HEAP_TREATMENT)),
+          fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_MORNING)), fetchCSV(getGvizUrl(BATCH2_ID, BATCH2_SHEET_AFTERNOON)), fetchCSV(getGvizUrl(BATCH2_ID, SHEET_HEAP_TREATMENT)),
+          fetchCSV(getGvizUrl(BATCH2_ID, SHEET_PH_POME)), fetchCSV(getGvizUrl(BATCH2_ID, SHEET_AMBIENT))
+        ]);
+
+        batch1Data.rawMorning = parseRawRows(b1M); batch1Data.rawAfternoon = parseRawRows(b1A); batch1Data.treatment = parseTreatmentRows(b1T);
+        batch2Data.rawMorning = parseRawRows(b2M); batch2Data.rawAfternoon = parseRawRows(b2A); batch2Data.treatment = parseTreatmentRows(b2T);
+        batch1Data.morning = aggregateSheetRows(batch1Data.rawMorning); batch1Data.afternoon = aggregateSheetRows(batch1Data.rawAfternoon);
+        batch2Data.morning = aggregateSheetRows(batch2Data.rawMorning); batch2Data.afternoon = aggregateSheetRows(batch2Data.rawAfternoon);
+
+        pomeRaw = parseAuxRows(pome, 'pome');
+        ambientRaw = parseAuxRows(ambient, 'ambient');
+
+        heapListB1 = Array.from(new Set(batch1Data.morning.map(d => d.heap))).filter(Boolean).sort();
+        heapListB2 = Array.from(new Set(batch2Data.morning.map(d => d.heap))).filter(Boolean).sort();
+
+        combinedHeapList = [
+          ...heapListB2.map(h => ({ id: `B2_${h}`, label: `Heap ${h} (B2)`, batchKey: 'B2', heapName: h })),
+          ...heapListB1.map(h => ({ id: `B1_${h}`, label: `Heap ${h} (B1)`, batchKey: 'B1', heapName: h }))
+        ];
+
+        initDropdowns();
+        renderAllCharts();
+        statusEl.innerHTML = `<span class="status-dot"></span> Live Connected`;
+      } catch (err) {
+        console.error(err);
+        statusEl.innerHTML = `<span class="status-dot" style="background-color:#ef4444;"></span> Sync Failed`;
+      }
+    }
+
+    function fetchCSV(url) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(url, { download: true, header: false, dynamicTyping: true, skipEmptyLines: true, complete: results => resolve(results.data), error: err => reject(err) });
+      });
+    }
+
+    function parseTreatmentRows(rows) {
+      if (!rows || rows.length <= 1) return {};
+      const map = {};
+      const header = rows[0].map(h => String(h).trim().toLowerCase());
+      const varIdx = header.indexOf('variable') !== -1 ? header.indexOf('variable') : 0;
+      const decIdx = header.indexOf('decomposer');
+      const litIdx = header.indexOf('liter per 4 ton');
+      const chopIdx = header.indexOf('chopping');
+      const sheltIdx = header.indexOf('shelter');
+      const dayIdx = header.findIndex(h => h === 'days' || h === 'day');
+
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const variable = r[varIdx] !== undefined ? String(r[varIdx]).trim() : '';
+        if (variable) {
+          const decomposer = decIdx !== -1 && r[decIdx] ? String(r[decIdx]).trim() : '-';
+          const liter = litIdx !== -1 && r[litIdx] !== undefined && r[litIdx] !== '' ? `${r[litIdx]}L` : '-';
+          const chopping = chopIdx !== -1 && r[chopIdx] ? String(r[chopIdx]).trim() : '-';
+          const shelter = sheltIdx !== -1 && r[sheltIdx] ? String(r[sheltIdx]).trim() : '-';
+          const rawDays = dayIdx !== -1 && r[dayIdx] !== undefined && r[dayIdx] !== null ? String(r[dayIdx]) : '';
+          const extraDays = rawDays.split(',').map(d => parseInt(d.trim(), 10)).filter(d => !isNaN(d));
+
+          map[variable] = { decomposer, chopping, shelter, extraDays, formulaText: `${decomposer} + ${liter} + ${chopping} + ${shelter}` };
+        }
+      }
+      return map;
+    }
+
+    function parseRawRows(rows) {
+      if (!rows || rows.length <= 1) return [];
+      const result = [];
+      const header = rows[0].map(h => String(h).trim().toLowerCase());
+      const varIdx = header.indexOf('variable') !== -1 ? header.indexOf('variable') : 0;
+      const dayIdx = header.findIndex(h => h === 'days' || h === 'day');
+      
+      // Paksa ambil kolom indeks ke-12 (Kolom M: Tanggal) secara langsung
+      const dateIdx = 12;
+
+      const spIdx = header.indexOf('sp');
+      const posIdx = header.indexOf('position');
+      const tempIdx = header.indexOf('temp');
+      const moistIdx = header.findIndex(h => h === 'moist' || h === 'moisture');
+      const phIdx = header.indexOf('ph'); 
+
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const heapVal = r[varIdx] !== undefined ? String(r[varIdx]).trim() : '';
+        const dayVal = dayIdx !== -1 ? parseNumOrNull(r[dayIdx]) : parseNumOrNull(r[1]);
+        if (heapVal && heapVal.toLowerCase() !== 'variable' && dayVal !== null) {
+          result.push({
+            heap: heapVal,
+            day: dayVal,
+            startDateRaw: r[dateIdx] !== undefined && r[dateIdx] !== null ? String(r[dateIdx]).trim() : '',
+            sp: spIdx !== -1 && r[spIdx] ? String(r[spIdx]).trim() : '',
+            position: posIdx !== -1 && r[posIdx] ? String(r[posIdx]).trim() : '',
+            temp: tempIdx !== -1 ? parseNumOrNull(r[tempIdx]) : null,
+            moisture: moistIdx !== -1 ? parseNumOrNull(r[moistIdx]) : null,
+            ph: phIdx !== -1 ? parseNumOrNull(r[phIdx]) : null
+          });
+        }
+      }
+      return result;
+    }
+
+    function parseAuxRows(rows, type) {
+      if (!rows || rows.length <= 1) return [];
+      const result = [];
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        let obj = { day21: parseNumOrNull(r[2]), day22: parseNumOrNull(r[3]), day23: parseNumOrNull(r[4]) };
+        if (type === 'pome') {
+          obj.ph = parseNumOrNull(r[5]);   
+          obj.temp = parseNumOrNull(r[6]); 
+        } else {
+          obj.temp = parseNumOrNull(r[6]); 
+        }
+        result.push(obj);
+      }
+      return result;
+    }
+
+    function aggregateSheetRows(rawMapped) {
+      const aggregated = {};
+      rawMapped.forEach(item => {
+        const key = `${item.heap}_${item.day}`;
+        if (!aggregated[key]) aggregated[key] = { ...item, count: 0, tempSum: 0, moistSum: 0 };
+        if (item.temp !== null && item.temp > 0) { aggregated[key].tempSum += item.temp; aggregated[key].count += 1; }
+        if (item.moisture !== null) { aggregated[key].moistSum += item.moisture; }
+        if (!aggregated[key].startDateRaw && item.startDateRaw) aggregated[key].startDateRaw = item.startDateRaw;
+      });
+
+      return Object.values(aggregated).map(item => ({
+        ...item,
+        temp: item.count > 0 ? +(item.tempSum / item.count).toFixed(1) : null,
+        moisture: item.count > 0 ? +(item.moistSum / item.count).toFixed(1) : null
+      })).sort((a, b) => a.day - b.day);
+    }
+
+    function getAuxVal(heap, day, auxData, field) {
+      const h = String(heap).trim().toUpperCase();
+      let dayCol = ['2.2','2.7','2.8','2.14'].includes(h) ? 'day21' : 
+                   ['2.4','2.11','2.12','2.13','2.15','2.16','2.17A','2.17B'].includes(h) ? 'day22' : 'day23';
+      const row = auxData.find(r => r[dayCol] === day);
+      return (row && row[field] && row[field] !== 0) ? row[field] : null;
+    }
+
+    function populateMainHeapDropdown() {
+      const chopF = document.getElementById('selectFilterChopping').value;
+      const sheltF = document.getElementById('selectFilterShelter').value;
+      const decF = document.getElementById('selectFilterDecomposer').value;
+      const mainSelect = document.getElementById('selectMainHeap');
+      const curr = mainSelect.value;
+
+      const filtered = combinedHeapList.filter(item => {
+        const treat = (item.batchKey === 'B2' ? batch2Data : batch1Data).treatment[item.heapName] || {};
+        if (chopF !== 'All' && (!treat.chopping || treat.chopping.toLowerCase() !== chopF.toLowerCase())) return false;
+        if (sheltF !== 'All' && (!treat.shelter || treat.shelter.toLowerCase() !== sheltF.toLowerCase())) return false;
+        if (decF !== 'All' && (!treat.decomposer || treat.decomposer.toUpperCase() !== decF.toUpperCase())) return false;
+        return true;
+      });
+
+      mainSelect.innerHTML = filtered.map(i => `<option value="${i.id}">${i.batchKey} - Heap ${i.heapName}</option>`).join('');
+      if (filtered.some(i => i.id === curr)) mainSelect.value = curr;
+      else if (filtered.length > 0) mainSelect.value = filtered[0].id;
+      
+      renderAllCharts();
+    }
+
+    function initDropdowns() {
+      const allOpts = combinedHeapList.map(i => `<option value="${i.id}">${i.label}</option>`).join('');
+      document.getElementById('selectComp1').innerHTML = `<option value="">-- None --</option>` + allOpts;
+      document.getElementById('selectComp2').innerHTML = `<option value="">-- None --</option>` + allOpts;
+      populateMainHeapDropdown();
+    }
+
+    function setupEventListeners() {
+      document.getElementById('refreshBtn').addEventListener('click', async (e) => {
+        e.currentTarget.disabled = true;
+        document.getElementById('refreshIcon').classList.add('animate-spin');
+        await fetchAllData();
+        e.currentTarget.disabled = false;
+        document.getElementById('refreshIcon').classList.remove('animate-spin');
+      });
+      document.getElementById('selectFilterChopping').addEventListener('change', populateMainHeapDropdown);
+      document.getElementById('selectFilterShelter').addEventListener('change', populateMainHeapDropdown);
+      document.getElementById('selectFilterDecomposer').addEventListener('change', populateMainHeapDropdown);
+      document.getElementById('selectMainHeap').addEventListener('change', renderAllCharts);
+      document.getElementById('selectComp1').addEventListener('change', () => renderAllCharts());
+      document.getElementById('selectComp2').addEventListener('change', () => renderAllCharts());
+    }
+
+    // --- Chart Renderer Helpers ---
+    function getBaseChartConfig(type, datasets, days, datesMap) {
+      return {
+        type: type,
+        data: { labels: days.map(() => ''), datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          layout: { padding: { bottom: 75, left: 15 } },
+          plugins: { customXAxisData: { days, datesMap, dayLabel: 'Day :' } },
+          scales: {
+            x: { 
+              grid: { display: true, color: '#e2e8f0' },
+              ticks: { display: false }
+            },
+            y: { 
+              grid: { display: true, color: '#e2e8f0' } 
+            }
+          }
+        }
+      };
+    }
+    
+    function drawChart(id, config) {
+      const ctx = document.getElementById(id).getContext('2d');
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(ctx, config);
+    }
+
+    function getHeapData(heapId) {
+      if(!heapId) return null;
+      const [bKey, hName] = heapId.split('_');
+      const store = bKey === 'B2' ? batch2Data : batch1Data;
+      return { 
+        name: hName, 
+        store, 
+        m: store.morning.filter(d => d.heap === hName), 
+        a: store.afternoon.filter(d => d.heap === hName),
+        rm: store.rawMorning.filter(d => d.heap === hName),
+        ra: store.rawAfternoon.filter(d => d.heap === hName),
+        treat: store.treatment[hName] || { extraDays: [], formulaText: '-' }
+      };
+    }
+
+    // --- MAIN RENDER LOOP ---
+    function renderAllCharts() {
+      const heapId = document.getElementById('selectMainHeap').value;
+      if (!heapId) return;
+
+      const data = getHeapData(heapId);
+      document.getElementById('heapFormulaText').innerText = `Formula: Heap ${data.name} => ${data.treat.formulaText}`;
+
+      // Global Day Mapping
+      const allTurnDays = Array.from(new Set(data.treat.extraDays)).sort((a, b) => a - b);
+      let days = Array.from(new Set([...data.m.map(d=>d.day), ...data.a.map(d=>d.day), ...allTurnDays])).sort((a,b) => a - b);
+
+      const validM = data.m.filter(x => x.temp !== null || x.moisture !== null);
+      const validA = data.a.filter(x => x.temp !== null || x.moisture !== null);
+      const maxM = validM.length ? Math.max(...validM.map(d => d.day)) : -Infinity;
+      const maxA = validA.length ? Math.max(...validA.map(d => d.day)) : -Infinity;
+      const maxDataDay = Math.max(maxM, maxA);
+
+      if (maxDataDay !== -Infinity) {
+        days = days.filter(d => d <= maxDataDay);
+      }
+
+      let baseDateObj = null, baseDayNum = -7;
+      const dateCandidates = [
+        ...data.m.filter(d => d.day === -7 && d.startDateRaw),
+        ...data.a.filter(d => d.day === -7 && d.startDateRaw),
+        ...data.m.filter(d => d.startDateRaw),
+        ...data.a.filter(d => d.startDateRaw)
+      ];
+      const baseRow = dateCandidates.find(d => parseDateString(d.startDateRaw));
+      if (baseRow) {
+        baseDateObj = parseDateString(baseRow.startDateRaw);
+        baseDayNum = baseRow.day;
+      }
+
+      const pointStyles = [], pointRadii = [];
+      const datesMap = {};
+
+      days.forEach((day, idx) => {
+        if (baseDateObj) {
+          datesMap[day] = calculateDateForDay(baseDateObj, baseDayNum, day);
+        }
+        if (day === 0) { pointStyles.push(markerDay0); pointRadii.push(6); } 
+        else if (allTurnDays.includes(day)) { pointStyles.push(getTOMarker(allTurnDays.indexOf(day) + 1)); pointRadii.push(8); } 
+        else { pointStyles.push('circle'); pointRadii.push(3); }
+      });
+
+      // Chart 1: Daily Avg Temp
+      let c1Data = days.map(d => {
+        const mv = data.m.find(x=>x.day===d), av = data.a.find(x=>x.day===d);
+        if(mv && mv.temp && av && av.temp) return (mv.temp + av.temp)/2;
+        return (mv||av||{}).temp || null;
+      });
+      let c1Conf = getBaseChartConfig('line', [
+        { label: 'Avg Temp (°C)', data: c1Data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart1', c1Conf);
+
+      // Chart 2: Continuous Segmented M/A
+      const c2Labels = [], c2Data = [], c2TimeTypes = [], c2Days = [], c2DatesMap = {};
+      days.forEach(d => {
+        const mv = data.m.find(x=>x.day===d), av = data.a.find(x=>x.day===d);
+
+        if(mv && mv.temp) { 
+          c2Labels.push(String(d)); 
+          c2Data.push(mv.temp); 
+          c2TimeTypes.push('M'); 
+          c2Days.push(d);
+        }
+        if(av && av.temp) { 
+          c2Labels.push(''); 
+          c2Data.push(av.temp); 
+          c2TimeTypes.push('A'); 
+          c2Days.push('');
+        }
+      });
+      c2Days.forEach((day) => {
+        if (day !== '' && datesMap[day]) c2DatesMap[day] = datesMap[day];
+      });
+      let c2Conf = {
+        type: 'line',
+        data: { labels: c2Labels, datasets: [{ 
+          label: 'Continuous Segmented Temp (°C)', data: c2Data, tension: 0.3, fill: false, pointRadius: 4,
+          pointBackgroundColor: ctx => c2TimeTypes[ctx.dataIndex] === 'M' ? '#38bdf8' : '#f97316',
+          pointBorderColor: ctx => c2TimeTypes[ctx.dataIndex] === 'M' ? '#38bdf8' : '#f97316',
+          segment: { borderColor: ctx => c2TimeTypes[ctx.p1DataIndex] === 'M' ? '#38bdf8' : '#f97316' }
+        }]},
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          layout: { padding: { bottom: 75, left: 15 } },
+          plugins: { customXAxisData: { days: c2Days, datesMap: c2DatesMap, dayLabel: 'Day :' } },
+          scales: {
+            x: { grid: { display: true, color: '#e2e8f0' }, ticks: { maxRotation: 0, minRotation: 0 } },
+            y: { grid: { display: true, color: '#e2e8f0' } }
+          }
+        }
+      };
+      drawChart('chart2', c2Conf);
+
+      // Chart 3: Morning vs Afternoon
+      let c3Conf = getBaseChartConfig('line', [
+        { label: 'Morning (°C)', data: days.map(d=>(data.m.find(x=>x.day===d)||{}).temp), borderColor: '#0ea5e9', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'Afternoon (°C)', data: days.map(d=>(data.a.find(x=>x.day===d)||{}).temp), borderColor: '#ef4444', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart3', c3Conf);
+
+      // Chart 4: Temp vs Moisture
+      let c4Conf = getBaseChartConfig('line', [
+        { label: 'Avg Temp (°C)', data: c1Data, borderColor: '#ef4444', yAxisID: 'y', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'Moisture (%)', data: days.map(d=>(data.m.find(x=>x.day===d)||{}).moisture), borderColor: '#0ea5e9', yAxisID: 'y1', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+      ], days, datesMap);
+      c4Conf.options.scales.y1 = { position: 'right', grid: { drawOnChartArea: false } };
+      drawChart('chart4', c4Conf);
+
+      // Chart 5: Temp by Pos
+      const getPosAvg = (dSet, posFilter) => days.map(d => {
+        let arr = dSet.filter(x => x.day === d && x.temp > 0 && new RegExp(posFilter, 'i').test(x.position));
+        return arr.length ? +(arr.reduce((s,x)=>s+x.temp,0)/arr.length).toFixed(2) : null;
+      });
+      let c5Conf = getBaseChartConfig('line', [
+        { label: 'Top Temp', data: getPosAvg(data.rm, 'top'), borderColor: '#ef4444', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'Middle Temp', data: getPosAvg(data.rm, 'mid'), borderColor: '#eab308', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'Bottom Temp', data: getPosAvg(data.rm, 'bot'), borderColor: '#22c55e', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart5', c5Conf);
+
+      // Chart 6: Morning Moisture
+      let c6Conf = getBaseChartConfig('line', [
+        { label: 'Upper Limit (70%)', data: days.map(()=>70), borderColor: '#ef4444', borderDash: [5,5], pointRadius: 0, fill: false },
+        { label: 'Lower Limit (40%)', data: days.map(()=>40), borderColor: '#eab308', borderDash: [5,5], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(234, 179, 8, 0.1)' },
+        { label: 'Morning Moisture (%)', data: days.map(d=>(data.m.find(x=>x.day===d)||{}).moisture), borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart6', c6Conf);
+
+      // Chart 7: Moisture by SP
+      const getPosMoist = (dSet, posFilter) => days.map(d => {
+        let arr = dSet.filter(x => x.day === d && x.moisture > 0 && new RegExp(posFilter, 'i').test(x.position));
+        return arr.length ? +(arr.reduce((s,x)=>s+x.moisture,0)/arr.length).toFixed(1) : null;
+      });
+      let c7Conf = getBaseChartConfig('line', [
+        { label: 'Upper Limit (70%)', data: days.map(()=>70), borderColor: '#ef4444', borderDash: [5,5], pointRadius: 0, fill: false },
+        { label: 'Lower Limit (40%)', data: days.map(()=>40), borderColor: '#eab308', borderDash: [5,5], pointRadius: 0, fill: '-1', backgroundColor: 'rgba(234, 179, 8, 0.1)' },
+        { label: 'Top Moist', data: getPosMoist(data.rm, 'top'), borderColor: '#ef4444', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'Mid Moist', data: getPosMoist(data.rm, 'mid'), borderColor: '#eab308', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'Bot Moist', data: getPosMoist(data.rm, 'bot'), borderColor: '#22c55e', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart7', c7Conf);
+
+      // Chart 8: Avg pH
+      const getAvgPh = (dSet) => days.map(d => {
+        let arr = dSet.filter(x => x.day === d && x.ph > 0);
+        return arr.length ? +(arr.reduce((s,x)=>s+x.ph,0)/arr.length).toFixed(2) : null;
+      });
+      let c8Conf = getBaseChartConfig('line', [
+        { label: `Heap Avg pH`, data: getAvgPh(data.rm), borderColor: '#8b5cf6', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: `POME pH`, data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'ph')), borderColor: '#06b6d4', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart8', c8Conf);
+
+      // Chart 9: pH by SP
+      const getPosPh = (dSet, posFilter) => days.map(d => {
+        let arr = dSet.filter(x => x.day === d && x.ph > 0 && new RegExp(posFilter, 'i').test(x.position));
+        return arr.length ? +(arr.reduce((s,x)=>s+x.ph,0)/arr.length).toFixed(2) : null;
+      });
+      let c9Conf = getBaseChartConfig('line', [
+        { label: 'Top pH', data: getPosPh(data.rm, 'top'), borderColor: '#ef4444', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'Mid pH', data: getPosPh(data.rm, 'mid'), borderColor: '#eab308', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'Bot pH', data: getPosPh(data.rm, 'bot'), borderColor: '#22c55e', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'POME pH', data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'ph')), borderColor: '#06b6d4', borderDash: [5,5], tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart9', c9Conf);
+
+      // Chart 10: Temp Heap vs POME vs Ambient
+      let c10Conf = getBaseChartConfig('line', [
+        { label: `Heap Avg Morning Temp`, data: days.map(d=>(data.m.find(x=>x.day===d)||{}).temp), borderColor: '#3b82f6', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: `POME Temp`, data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'temp')), borderColor: '#f59e0b', tension: 0.3, spanGaps: true },
+        { label: `Ambient Temp 08:00`, data: days.map(d => getAuxVal(data.name, d, ambientRaw, 'temp')), borderColor: '#10b981', tension: 0.3, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart10', c10Conf);
+
+      // Chart 11: Detailed SP Temp vs Pome vs Ambient
+      const allRaw = [...data.rm, ...data.ra];
+      const getSpPosAvg = (spFilter, posFilter) => days.map(d => {
+        let arr = allRaw.filter(x => x.day === d && x.temp !== null && x.temp > 0 && 
+                                     x.sp && x.sp.toUpperCase() === spFilter && 
+                                     x.position && new RegExp(posFilter, 'i').test(x.position));
+        return arr.length ? +(arr.reduce((s,x)=>s+x.temp,0)/arr.length).toFixed(2) : null;
+      });
+
+      let c11Conf = getBaseChartConfig('line', [
+        // Sampling Point A
+        { label: 'A-Top', data: getSpPosAvg('A', 'top'), borderColor: '#d60029', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'A-Middle', data: getSpPosAvg('A', 'mid'), borderColor: '#ff0000', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'A-Bottom', data: getSpPosAvg('A', 'bot'), borderColor: '#ff00a0', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        
+        // Sampling Point B
+        { label: 'B-Top', data: getSpPosAvg('B', 'top'), borderColor: '#08007a', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'B-Middle', data: getSpPosAvg('B', 'mid'), borderColor: '#0066ff', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'B-Bottom', data: getSpPosAvg('B', 'bot'), borderColor: '#00e5ff', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        
+        // Sampling Point C
+        { label: 'C-Top', data: getSpPosAvg('C', 'top'), borderColor: '#009900', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'C-Middle', data: getSpPosAvg('C', 'mid'), borderColor: '#a2ff00', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+        { label: 'C-Bottom', data: getSpPosAvg('C', 'bot'), borderColor: '#ffff00', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true },
+
+        // POME & Ambient
+        { label: `POME Temp`, data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'temp')), borderColor: '#a855f7', borderDash: [5,5], tension: 0.3, spanGaps: true },
+        { label: `Ambient Temp 08:00`, data: days.map(d => getAuxVal(data.name, d, ambientRaw, 'temp')), borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.3, spanGaps: true }
+      ], days, datesMap);
+      drawChart('chart11', c11Conf);
+
+      // Chart 12: Variable Temp Comparison
+      renderChart12(days, datesMap);
+    }
+
+    function renderChart12(days, datesMap) {
+      const mainId = document.getElementById('selectMainHeap').value;
+      const c1Id = document.getElementById('selectComp1').value;
+      const c2Id = document.getElementById('selectComp2').value;
+      if (!mainId) return;
+
+      const mainData = getHeapData(mainId);
+      let ds = [ { label: `Main: ${mainData.name}`, data: days.map(d => (mainData.m.find(x=>x.day===d)||{}).temp), borderColor: '#3b82f6', tension: 0.3, spanGaps: true } ];
+      
+      if (c1Id) { 
+        const c1 = getHeapData(c1Id); 
+        ds.push({ label: `Comp 1: ${c1.name}`, data: days.map(d => (c1.m.find(x=>x.day===d)||{}).temp), borderColor: '#ef4444', tension: 0.3, spanGaps: true }); 
+      }
+      if (c2Id) { 
+        const c2 = getHeapData(c2Id); 
+        ds.push({ label: `Comp 2: ${c2.name}`, data: days.map(d => (c2.m.find(x=>x.day===d)||{}).temp), borderColor: '#10b981', tension: 0.3, spanGaps: true }); 
+      }
+
+      let c12Conf = getBaseChartConfig('line', ds, days, datesMap);
+      drawChart('chart12', c12Conf);
+    }
+  </script>
+</body>
+</html>
