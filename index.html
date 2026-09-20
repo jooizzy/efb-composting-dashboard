@@ -164,13 +164,13 @@
           <!-- Toggles UI -->
           <div class="flex flex-wrap items-center gap-3 mt-3" id="chart1Controls">
             <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
-              <input type="checkbox" class="c1-toggle" data-idx="1"> Avg Heap's Moisture
+              <input type="checkbox" class="c1-toggle" data-idx="1"> Avg Heap Moisture
             </label>
             <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
-              <input type="checkbox" class="c1-toggle" data-idx="2"> Avg Heap's pH
+              <input type="checkbox" class="c1-toggle" data-idx="2"> Avg Heap pH
             </label>
             <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
-              <input type="checkbox" class="c1-toggle" data-idx="3"> Pome's pH
+              <input type="checkbox" class="c1-toggle" data-idx="3"> Pome pH
             </label>
             <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 cursor-pointer bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors">
               <input type="checkbox" class="c1-toggle" data-idx="4"> Morning Ambient
@@ -822,9 +822,9 @@
 
       let c1Conf = getBaseChartConfig('line', [
         { label: 'Avg Temp (°C)', data: c1Data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y' },
-        { label: "Avg Heap's Moisture (%)", data: moistData, borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y', hidden: getCheckState(1) },
-        { label: "Avg Heap's pH", data: heapPhData, borderColor: '#8b5cf6', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y1', hidden: getCheckState(2) },
-        { label: "Pome's pH", data: pomePhData, borderColor: '#06b6d4', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y1', hidden: getCheckState(3) },
+        { label: "Avg Heap Moisture (%)", data: moistData, borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y', hidden: getCheckState(1) },
+        { label: "Avg Heap pH", data: heapPhData, borderColor: '#8b5cf6', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y1', hidden: getCheckState(2) },
+        { label: "Pome pH", data: pomePhData, borderColor: '#06b6d4', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y1', hidden: getCheckState(3) },
         { label: "Morning Ambient (°C)", data: morningAmbData, borderColor: '#10b981', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y', hidden: getCheckState(4) },
         { label: "Avg Ambient (°C)", data: avgAmbData, borderColor: '#f59e0b', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y', hidden: getCheckState(5) }
       ], days, datesMap);
