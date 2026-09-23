@@ -202,7 +202,7 @@
 
     <!-- 7. Moisture by SP -->
     <div class="card">
-      <h2 class="text-lg font-bold text-slate-800 mb-4">7. Moisture by Sampling Point Setpoint</h2>
+      <h2 class="text-lg font-bold text-slate-800 mb-4">7. Sampling Point Moisture</h2>
       <div class="chart-container"><canvas id="chart7"></canvas></div>
     </div>
 
@@ -226,7 +226,7 @@
 
     <!-- 11. Detailed Temp -->
     <div class="card">
-      <h2 class="text-lg font-bold text-slate-800 mb-4">11. Detailed Temp: Heap Points, POME & Ambient (08:00)</h2>
+      <h2 class="text-lg font-bold text-slate-800 mb-4">11. Sampling Points, POME, & Ambient Temperature at 08:00</h2>
       <div class="chart-container"><canvas id="chart11"></canvas></div>
     </div>
 
@@ -271,7 +271,6 @@
     let pomeRaw = [];
     let ambientRaw = [];
 
-    // Store chart instances
     const charts = {};
 
     // --- Custom Plugin: Day & Slanted Date Axis Customizer ---
@@ -299,7 +298,6 @@
 
         days.forEach((day, index) => {
           if (step > 1 && index % step !== 0) return;
-          
           if (day === '' || day === null || day === undefined || day === lastDrawnDay) return;
           lastDrawnDay = day;
 
@@ -337,16 +335,13 @@
       afterDraw(chart) {
         if (chart.tooltip && chart.tooltip.opacity > 0) {
           const { ctx, chartArea: { top, bottom, left, right } } = chart;
-          
           const x = chart.tooltip.caretX;
           const y = chart.tooltip.caretY;
 
           ctx.save();
           ctx.beginPath();
-          
           ctx.moveTo(x, top);
           ctx.lineTo(x, bottom);
-          
           ctx.moveTo(left, y);
           ctx.lineTo(right, y);
 
@@ -360,7 +355,7 @@
     };
     Chart.register(crosshairPlugin);
 
-    // --- Marker Generation ---
+    // --- Dynamic Marker Generation ---
     function createNumberedMarker(number, bgColor = '#ef4444') {
       const canvas = document.createElement('canvas');
       canvas.width = 18;
@@ -379,24 +374,24 @@
       }
       return canvas;
     }
-    const markerDay0 = createNumberedMarker('', '#15803d');
+
     const markerCache = {};
-    function getTOMarker(number) {
-      if (!markerCache[number]) {
-        markerCache[number] = createNumberedMarker(number, '#ef4444');
+    function getDynamicMarker(number, bgColor) {
+      const key = `${number}_${bgColor}`;
+      if (!markerCache[key]) {
+        markerCache[key] = createNumberedMarker(number, bgColor);
       }
-      return markerCache[number];
+      return markerCache[key];
     }
+    const markerDay0 = getDynamicMarker('', '#15803d');
 
     // --- Parsing Utils ---
     function parseDateString(str) {
       if (!str) return null;
-
       if (str instanceof Date) {
         if (isNaN(str.getTime())) return null;
         return new Date(str.getFullYear(), str.getMonth(), str.getDate());
       }
-
       const value = String(str).trim();
       if (!value || value === "0" || value === "-") return null;
 
@@ -424,7 +419,6 @@
       if (!isNaN(parsed.getTime())) {
         return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
       }
-
       return null;
     }
 
@@ -714,8 +708,8 @@
       if (y40 === y70) return 'rgba(234, 179, 8, 0.3)';
       
       const gradient = ctx.createLinearGradient(0, y40, 0, y70);
-      gradient.addColorStop(0, 'rgba(234, 179, 8, 0.3)'); // Yellow at 40
-      gradient.addColorStop(1, 'rgba(239, 68, 68, 0.3)'); // Red at 70
+      gradient.addColorStop(0, 'rgba(234, 179, 8, 0.3)'); 
+      gradient.addColorStop(1, 'rgba(239, 68, 68, 0.3)'); 
       return gradient;
     };
 
@@ -760,8 +754,9 @@
         if (baseDateObj) {
           datesMap[day] = calculateDateForDay(baseDateObj, baseDayNum, day);
         }
+        // Marker untuk Chart utama (Default merah)
         if (day === 0) { pointStyles.push(markerDay0); pointRadii.push(6); } 
-        else if (allTurnDays.includes(day)) { pointStyles.push(getTOMarker(allTurnDays.indexOf(day) + 1)); pointRadii.push(8); } 
+        else if (allTurnDays.includes(day)) { pointStyles.push(getDynamicMarker(allTurnDays.indexOf(day) + 1, '#ef4444')); pointRadii.push(8); } 
         else { pointStyles.push('circle'); pointRadii.push(3); }
       });
 
@@ -773,13 +768,38 @@
         return mv ? mv.temp : null;
       });
 
+      let moistData = days.map(d => {
+        const mv = data.m.find(x=>x.day===d), av = data.a.find(x=>x.day===d);
+        if(mv && mv.moisture && av && av.moisture) return (mv.moisture + av.moisture)/2;
+        return (mv||av||{}).moisture || null;
+      });
+
+      let heapPhData = days.map(d => {
+        let arr = data.rm.filter(x => x.day === d && x.ph > 0);
+        return arr.length ? +(arr.reduce((s,x)=>s+x.ph,0)/arr.length).toFixed(2) : null;
+      });
+
+      let pomePhData = days.map(d => getAuxVal(data.name, d, pomeRaw, 'ph'));
+      let morningAmbData = days.map(d => getAuxVal(data.name, d, ambientRaw, 'temp'));
+
+      let avgAmbData = days.map(d => {
+        const m = getAuxVal(data.name, d, ambientRaw, 'temp');
+        const n = getAuxVal(data.name, d, ambientRaw, 'tempNoon');
+        const a = getAuxVal(data.name, d, ambientRaw, 'tempAfternoon');
+        let sum = 0, count = 0;
+        if (m !== null) { sum += m; count++; }
+        if (n !== null) { sum += n; count++; }
+        if (a !== null) { sum += a; count++; }
+        return count > 0 ? +(sum/count).toFixed(2) : null;
+      });
+
       let c1Conf = getBaseChartConfig('line', [
         { label: 'Morning Avg Temp (°C)', data: c1Data, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, yAxisID: 'y' },
-        { label: "Avg Variable Moisture (%)", data: days.map(()=>null), borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y', hidden: true },
-        { label: "Avg Heap pH", data: days.map(()=>null), borderColor: '#8b5cf6', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y1', hidden: true },
-        { label: "Pome pH", data: days.map(()=>null), borderColor: '#06b6d4', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y1', hidden: true },
-        { label: "Morning Ambient (°C)", data: days.map(()=>null), borderColor: '#10b981', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y', hidden: true },
-        { label: "Avg Ambient (°C)", data: days.map(()=>null), borderColor: '#f59e0b', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y', hidden: true }
+        { label: "Avg Variable Moisture (%)", data: moistData, borderColor: '#0ea5e9', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y', hidden: true },
+        { label: "Avg Heap pH", data: heapPhData, borderColor: '#8b5cf6', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y1', hidden: true },
+        { label: "Pome pH", data: pomePhData, borderColor: '#06b6d4', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y1', hidden: true },
+        { label: "Morning Ambient (°C)", data: morningAmbData, borderColor: '#10b981', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y', hidden: true },
+        { label: "Avg Ambient (°C)", data: avgAmbData, borderColor: '#f59e0b', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, yAxisID: 'y', hidden: true }
       ], days, datesMap, 2);
 
       c1Conf.options.scales.y = {
@@ -857,11 +877,11 @@
 
       // Chart 6: Morning Moisture (Gradient Block & Green Optimal Range)
       let c6Conf = getBaseChartConfig('line', [
-        { label: 'Upper Limit (70%)', data: days.map(()=>70), borderColor: '#ef4444', borderDash: [5,5], pointRadius: 0, pointHitRadius: 0, fill: false },
-        { label: 'Lower Limit (40%)', data: days.map(()=>40), borderColor: '#eab308', borderDash: [5,5], pointRadius: 0, pointHitRadius: 0, fill: 0, backgroundColor: gradientFill40to70 },
-        { label: 'Optimal Upper (60%)', data: days.map(()=>60), borderColor: '#10b981', borderDash: [2,2], pointRadius: 0, pointHitRadius: 0, fill: false },
-        { label: 'Optimal Lower (50%)', data: days.map(()=>50), borderColor: '#10b981', borderDash: [2,2], pointRadius: 0, pointHitRadius: 0, fill: 2, backgroundColor: 'rgba(16, 185, 129, 0.4)' },
-        { label: 'Morning Moisture (%)', data: days.map(d=>(data.m.find(x=>x.day===d)||{}).moisture), borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true }
+        { label: 'Upper Limit (70%)', data: days.map(()=>70), borderColor: '#ef4444', borderWidth: 1, pointRadius: 0, pointHitRadius: 0, fill: false, order: 2 },
+        { label: 'Lower Limit (40%)', data: days.map(()=>40), borderColor: '#eab308', borderWidth: 1, pointRadius: 0, pointHitRadius: 0, fill: 0, backgroundColor: gradientFill40to70, order: 2 },
+        { label: 'Optimal Upper (60%)', data: days.map(()=>60), borderColor: '#10b981', borderWidth: 1, pointRadius: 0, pointHitRadius: 0, fill: false, order: 2 },
+        { label: 'Optimal Lower (50%)', data: days.map(()=>50), borderColor: '#10b981', borderWidth: 1, pointRadius: 0, pointHitRadius: 0, fill: 2, backgroundColor: 'rgba(16, 185, 129, 0.4)', order: 2 },
+        { label: 'Morning Moisture (%)', data: days.map(d=>(data.m.find(x=>x.day===d)||{}).moisture), borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: 0.3, pointStyle: pointStyles, pointRadius: pointRadii, spanGaps: true, order: 1 }
       ], days, datesMap);
       
       c6Conf.options.plugins.tooltip.filter = (t) => !t.dataset.label.includes('Limit') && !t.dataset.label.includes('Optimal');
@@ -874,13 +894,13 @@
         return arr.length ? +(arr.reduce((s,x)=>s+x.moisture,0)/arr.length).toFixed(1) : null;
       });
       let c7Conf = getBaseChartConfig('line', [
-        { label: 'Upper Limit (70%)', data: days.map(()=>70), borderColor: '#ef4444', borderDash: [5,5], pointRadius: 0, pointHitRadius: 0, fill: false },
-        { label: 'Lower Limit (40%)', data: days.map(()=>40), borderColor: '#eab308', borderDash: [5,5], pointRadius: 0, pointHitRadius: 0, fill: 0, backgroundColor: gradientFill40to70 },
-        { label: 'Optimal Upper (60%)', data: days.map(()=>60), borderColor: '#10b981', borderDash: [2,2], pointRadius: 0, pointHitRadius: 0, fill: false },
-        { label: 'Optimal Lower (50%)', data: days.map(()=>50), borderColor: '#10b981', borderDash: [2,2], pointRadius: 0, pointHitRadius: 0, fill: 2, backgroundColor: 'rgba(16, 185, 129, 0.4)' },
-        { label: 'Top Moist', data: getPosMoist(data.rm, 'top'), borderColor: '#ef4444', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true },
-        { label: 'Mid Moist', data: getPosMoist(data.rm, 'mid'), borderColor: '#eab308', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true },
-        { label: 'Bot Moist', data: getPosMoist(data.rm, 'bot'), borderColor: '#22c55e', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true }
+        { label: 'Upper Limit (70%)', data: days.map(()=>70), borderColor: '#ef4444', borderWidth: 1, pointRadius: 0, pointHitRadius: 0, fill: false, order: 2 },
+        { label: 'Lower Limit (40%)', data: days.map(()=>40), borderColor: '#eab308', borderWidth: 1, pointRadius: 0, pointHitRadius: 0, fill: 0, backgroundColor: gradientFill40to70, order: 2 },
+        { label: 'Optimal Upper (60%)', data: days.map(()=>60), borderColor: '#10b981', borderWidth: 1, pointRadius: 0, pointHitRadius: 0, fill: false, order: 2 },
+        { label: 'Optimal Lower (50%)', data: days.map(()=>50), borderColor: '#10b981', borderWidth: 1, pointRadius: 0, pointHitRadius: 0, fill: 2, backgroundColor: 'rgba(16, 185, 129, 0.4)', order: 2 },
+        { label: 'Top Moist', data: getPosMoist(data.rm, 'top'), borderColor: '#ef4444', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, order: 1 },
+        { label: 'Mid Moist', data: getPosMoist(data.rm, 'mid'), borderColor: '#eab308', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, order: 1 },
+        { label: 'Bot Moist', data: getPosMoist(data.rm, 'bot'), borderColor: '#22c55e', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true, order: 1 }
       ], days, datesMap);
 
       c7Conf.options.plugins.tooltip.filter = (t) => !t.dataset.label.includes('Limit') && !t.dataset.label.includes('Optimal');
@@ -908,7 +928,7 @@
         { label: 'Top pH', data: getPosPh(data.rm, 'top'), borderColor: '#ef4444', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true },
         { label: 'Mid pH', data: getPosPh(data.rm, 'mid'), borderColor: '#eab308', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true },
         { label: 'Bot pH', data: getPosPh(data.rm, 'bot'), borderColor: '#22c55e', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true },
-        { label: 'POME pH', data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'ph')), borderColor: '#06b6d4', borderDash: [5,5], tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true }
+        { label: 'POME pH', data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'ph')), borderColor: '#06b6d4', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true }
       ], days, datesMap);
       c9Conf.options.scales.y.title = { display: true, text: 'pH (Potential of Hydrogen)', font: { weight: '600', size: 12 } };
       drawChart('chart9', c9Conf);
@@ -941,9 +961,10 @@
         { label: 'C-Top', data: getSpPosAvg('C', 'top'), borderColor: '#009900', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true },
         { label: 'C-Middle', data: getSpPosAvg('C', 'mid'), borderColor: '#a2ff00', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true },
         { label: 'C-Bottom', data: getSpPosAvg('C', 'bot'), borderColor: '#ffff00', tension: 0.3, pointStyle: 'circle', pointRadius: 3, spanGaps: true },
-        { label: `POME Temp`, data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'temp')), borderColor: '#a855f7', borderDash: [5,5], tension: 0.3, spanGaps: true },
-        { label: `Ambient Temp 08:00`, data: days.map(d => getAuxVal(data.name, d, ambientRaw, 'temp')), borderColor: '#0ea5e9', borderDash: [5,5], tension: 0.3, spanGaps: true }
+        { label: `POME Temp`, data: days.map(d => getAuxVal(data.name, d, pomeRaw, 'temp')), borderColor: '#a855f7', tension: 0.3, spanGaps: true },
+        { label: `Ambient Temp 08:00`, data: days.map(d => getAuxVal(data.name, d, ambientRaw, 'temp')), borderColor: '#0ea5e9', tension: 0.3, spanGaps: true }
       ], days, datesMap);
+      c11Conf.options.scales.y.title = { display: true, text: 'Temperature (°C)', font: { weight: '600', size: 12 } };
       drawChart('chart11', c11Conf);
 
       // Chart 12: Variable Temp Comparison
@@ -956,19 +977,25 @@
       const c2Id = document.getElementById('selectComp2').value;
       if (!mainId) return;
 
-      const getHeapPointStyles = (hData) => {
+      const getHeapPointStyles = (hData, lineColor) => {
         const toDays = Array.from(new Set(hData.treat.extraDays));
         let pStyles = [], pRadii = [];
         days.forEach(d => {
-          if (d === 0) { pStyles.push(markerDay0); pRadii.push(6); }
-          else if (toDays.includes(d)) { pStyles.push(getTOMarker(toDays.indexOf(d) + 1)); pRadii.push(8); }
-          else { pStyles.push('circle'); pRadii.push(3); }
+          if (d === 0) { 
+            pStyles.push(getDynamicMarker('', lineColor)); pRadii.push(6); 
+          }
+          else if (toDays.includes(d)) { 
+            pStyles.push(getDynamicMarker(toDays.indexOf(d) + 1, lineColor)); pRadii.push(8); 
+          }
+          else { 
+            pStyles.push('circle'); pRadii.push(3); 
+          }
         });
         return { pStyles, pRadii };
       };
 
       const mainData = getHeapData(mainId);
-      const mStyle = getHeapPointStyles(mainData);
+      const mStyle = getHeapPointStyles(mainData, '#3b82f6');
       
       let ds = [ { 
         label: `Main: ${mainData.name}`, 
@@ -982,7 +1009,7 @@
       
       if (c1Id) { 
         const c1 = getHeapData(c1Id); 
-        const s1 = getHeapPointStyles(c1);
+        const s1 = getHeapPointStyles(c1, '#ef4444');
         ds.push({ 
           label: `Comp 1: ${c1.name}`, 
           data: days.map(d => (c1.m.find(x=>x.day===d)||{}).temp), 
@@ -995,7 +1022,7 @@
       }
       if (c2Id) { 
         const c2 = getHeapData(c2Id);
-        const s2 = getHeapPointStyles(c2); 
+        const s2 = getHeapPointStyles(c2, '#10b981'); 
         ds.push({ 
           label: `Comp 2: ${c2.name}`, 
           data: days.map(d => (c2.m.find(x=>x.day===d)||{}).temp), 
